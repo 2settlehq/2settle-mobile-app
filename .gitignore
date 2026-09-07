@@ -18,6 +18,9 @@ ios/Flutter/ephemeral/
 *.log
 reference-build/*.apk
 
+# Unused high-resolution source photo; it is not referenced by the app.
+app-source/assets/images/2R7A0118.JPG
+
 .env
 .env.*
 !.env.example

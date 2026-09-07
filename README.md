@@ -6,7 +6,8 @@ This package contains the source used by the current 2Settle Flutter mobile app 
 
 - `app-source/` — Flutter application source, Android and iOS projects, app assets, Firebase files, and dependency manifests.
 - `mobile-api/` — Vercel server-side proxy used by the app for payments, bank-account resolution, and gift operations.
-- `reference-build/2Settle V2.36.38.apk` — latest available Android build for installation and visual/behavioral comparison.
+
+The reference APK is kept in the local handoff package rather than this repository. It is not needed to build the app from source.
 
 ## Start the Flutter app
 
