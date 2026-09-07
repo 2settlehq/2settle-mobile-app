@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "532037830967",
+    "project_id": "settle-405f1",
+    "storage_bucket": "settle-405f1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532037830967:android:2d7dbe9447cc2937ea32b2",
+        "android_client_info": {
+          "package_name": "com.sirfitech.settleio"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAekDLjInMXynXSsH8XOsHM3AYwHa6zliE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532037830967:android:2d7dbe9447cc2937ea32b2",
+        "android_client_info": {
+          "package_name": "com.sirfitech.settleio.original"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAekDLjInMXynXSsH8XOsHM3AYwHa6zliE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
