@@ -64,7 +64,7 @@ dependencies:
   google_sign_in_platform_interface: 2.5.0
   google_sign_in_web: 0.12.4+4
   http: 1.4.0
-  intl: 0.20.2
+  intl: ^0.20.3
   json_path: 0.7.2
   mask_text_input_formatter: 2.9.0
   mime_type: 1.0.0
