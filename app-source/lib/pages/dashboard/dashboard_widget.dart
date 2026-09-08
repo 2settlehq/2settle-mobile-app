@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -34,7 +35,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
   static const _transactionStorageKey = '2settle_initiated_transactions';
   static const _receiveStorageKey = '2settle_receive_requests';
   static const _giftHistoryStorageKey = '2settle_gift_history';
-  static const _giftClaimBaseUrl = 'https://2settlemobile.vercel.app/api/gifts';
+  static const _giftClaimBaseUrl = ApiConfig.giftsBaseUrl;
   static const _nativeChannel = MethodChannel('com.sirfitech.settleio/share');
   Timer? _rateTypingTimer;
   Timer? _rateRefreshTimer;

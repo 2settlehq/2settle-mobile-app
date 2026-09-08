@@ -3,6 +3,7 @@ import 'dart:async';
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -41,8 +42,7 @@ class _ReceiveAccountSetupScaffoldState
   static const _red = Color(0xFFC30000);
   static const _storageKey = ReceivePaymentDetailsWidget.storageKey;
   static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
-  static const _validateBankUrl =
-      'https://2settlemobile.vercel.app/api/banks/resolve';
+  static const _validateBankUrl = ApiConfig.banksResolveUrl;
 
   final _labelController = TextEditingController();
   final _bankController = TextEditingController();

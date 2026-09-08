@@ -1,5 +1,6 @@
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -20,7 +21,7 @@ class CreateGiftWidget extends StatefulWidget {
 
 class _CreateGiftWidgetState extends State<CreateGiftWidget> {
   static const _blue = Color(0xFF4472C4);
-  static const _paymentsUrl = 'https://2settlemobile.vercel.app/api/payments';
+  static const _paymentsUrl = ApiConfig.paymentsUrl;
   final _amountController = TextEditingController(text: '5000');
   String _crypto = 'USDT';
   String _network = 'TRC20';

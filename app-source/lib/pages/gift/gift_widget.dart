@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -24,7 +25,7 @@ class _GiftWidgetState extends State<GiftWidget> {
   static const _green = Color(0xFF17A34A);
   static const _giftHistoryStorageKey = '2settle_gift_history';
   static const _transactionStorageKey = '2settle_initiated_transactions';
-  static const _giftClaimBaseUrl = 'https://2settlemobile.vercel.app/api/gifts';
+  static const _giftClaimBaseUrl = ApiConfig.giftsBaseUrl;
 
   List<_GiftHistoryItem> _history = [];
   Timer? _giftStatusTimer;

@@ -3,6 +3,7 @@ import 'dart:async';
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -63,8 +64,7 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
   static const _blue = Color(0xFF4472C4);
   static const _storageKey = '2settle_saved_beneficiaries';
   static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
-  static const _validateBankUrl =
-      'https://2settlemobile.vercel.app/api/banks/resolve';
+  static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _fallbackBankCodes = ngBankCodes;
 
   @override
