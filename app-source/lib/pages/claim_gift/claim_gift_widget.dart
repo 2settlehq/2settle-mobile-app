@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -30,9 +31,8 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
   static const _red = Color(0xFFC30000);
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
   static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
-  static const _validateBankUrl =
-      'https://2settlemobile.vercel.app/api/banks/resolve';
-  static const _giftClaimBaseUrl = 'https://2settlemobile.vercel.app/api/gifts';
+  static const _validateBankUrl = ApiConfig.banksResolveUrl;
+  static const _giftClaimBaseUrl = ApiConfig.giftsBaseUrl;
 
   final _giftIdController = TextEditingController();
   final _accountController = TextEditingController();

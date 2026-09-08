@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -70,7 +71,7 @@ class GiftClaimDetailsWidget extends StatefulWidget {
 
 class _GiftClaimDetailsWidgetState extends State<GiftClaimDetailsWidget> {
   static const _blue = Color(0xFF4472C4);
-  static const _giftClaimBaseUrl = 'https://2settlemobile.vercel.app/api/gifts';
+  static const _giftClaimBaseUrl = ApiConfig.giftsBaseUrl;
   static const _giftHistoryStorageKey = '2settle_gift_history';
   static const _transactionStorageKey = '2settle_initiated_transactions';
   static const _nativeChannel = MethodChannel('com.sirfitech.settleio/share');

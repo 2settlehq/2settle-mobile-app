@@ -1,6 +1,7 @@
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -31,8 +32,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   static const _storageKey = '2settle_receive_requests';
   static const _transactionStorageKey = '2settle_initiated_transactions';
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
-  static const _validateBankUrl =
-      'https://2settlemobile.vercel.app/api/banks/resolve';
+  static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _bankCodes = ngBankCodes;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();

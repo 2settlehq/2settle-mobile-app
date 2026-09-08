@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
+import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
@@ -38,8 +39,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   static const _cryptoPriceUrl =
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,tether,tron&vs_currencies=usd';
   static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
-  static const _validateBankUrl =
-      'https://2settlemobile.vercel.app/api/banks/resolve';
+  static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _fallbackBankCodes = ngBankCodes;
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
   Timer? _rateRefreshTimer;
