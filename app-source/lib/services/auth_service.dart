@@ -22,6 +22,7 @@ class AuthService {
   // Same key profile_details_widget.dart / set_app_passcode_widget.dart
   // read and write, so a name synced here shows up there too.
   static const _usernameKey = '2settle_profile_username';
+  static const _avatarUrlKey = '2settle_profile_avatar_url';
 
   /// [channel] is `'email'` or `'phone'`; [identifier] is the email address
   /// or normalized phone number to send the login code to.
@@ -80,6 +81,7 @@ class AuthService {
             refreshToken: data['refreshToken']?.toString(),
             userId: user is Map ? user['id']?.toString() : null,
             displayName: user is Map ? user['displayName']?.toString() : null,
+            avatarUrl: user is Map ? user['avatarUrl']?.toString() : null,
           );
         }
         return const AuthResult.success();
@@ -118,6 +120,7 @@ class AuthService {
     String? refreshToken,
     String? userId,
     String? displayName,
+    String? avatarUrl,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     if (accessToken != null && accessToken.isNotEmpty) {
@@ -129,10 +132,13 @@ class AuthService {
     if (userId != null && userId.isNotEmpty) {
       await prefs.setString(_userIdKey, userId);
     }
-    // The server has no displayName yet for a brand new phone/email
-    // signup, so don't clobber a username already set locally with null.
+    // The server has no displayName/avatarUrl yet for a brand new
+    // phone/email signup, so don't clobber locally-set values with null.
     if (displayName != null && displayName.isNotEmpty) {
       await prefs.setString(_usernameKey, displayName);
+    }
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      await prefs.setString(_avatarUrlKey, avatarUrl);
     }
   }
 
@@ -160,6 +166,11 @@ class AuthService {
     return prefs.getString(_userIdKey);
   }
 
+  static Future<String?> getAvatarUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_avatarUrlKey);
+  }
+
   /// Push a profile change to the server and, on success, mirror it into
   /// local storage so the UI reflects it immediately.
   static Future<AuthResult> updateProfile({String? displayName, String? avatarUrl}) async {
@@ -184,9 +195,12 @@ class AuthService {
           )
           .timeout(const Duration(seconds: 12));
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        final prefs = await SharedPreferences.getInstance();
         if (displayName != null && displayName.isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
           await prefs.setString(_usernameKey, displayName);
+        }
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          await prefs.setString(_avatarUrlKey, avatarUrl);
         }
         return const AuthResult.success();
       }

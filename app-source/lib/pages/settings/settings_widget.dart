@@ -2,7 +2,9 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/components/top_notice.dart';
+import '/components/user_avatar.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import '/services/mobile_identity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +33,10 @@ class _SettingsWidgetState extends State<SettingsWidget>
   static const _blue = Color(0xFF4472C4);
   String _displayName = 'Sirfitech';
   String _mobileId = 'Loading...';
+  String _userIdDisplay = '';
+  String _contactValue = '';
+  IconData _contactIcon = Icons.phone_rounded;
+  String _avatarUrl = '';
 
   @override
   void initState() {
@@ -51,6 +57,9 @@ class _SettingsWidgetState extends State<SettingsWidget>
     );
     _loadProfileName();
     _loadMobileId();
+    _loadUserId();
+    _loadContact();
+    _loadAvatar();
   }
 
   @override
@@ -82,15 +91,43 @@ class _SettingsWidgetState extends State<SettingsWidget>
 
   Future<void> _loadProfileName() async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('2settle_profile_name')?.trim();
+    final stored = prefs.getString('2settle_profile_username')?.trim();
     if (!mounted || stored == null || stored.isEmpty) return;
-    safeSetState(() => _displayName = stored);
+    safeSetState(() =>
+        _displayName = '${stored[0].toUpperCase()}${stored.substring(1)}');
   }
 
   Future<void> _loadMobileId() async {
     final mobileId = await MobileIdentityService.getOrCreateMobileId();
     if (!mounted) return;
     safeSetState(() => _mobileId = mobileId);
+  }
+
+  Future<void> _loadUserId() async {
+    final rawId = await AuthService.getUserId();
+    if (!mounted || rawId == null || rawId.isEmpty) return;
+    safeSetState(() => _userIdDisplay = '2S-$rawId');
+  }
+
+  Future<void> _loadAvatar() async {
+    final avatarUrl = await AuthService.getAvatarUrl();
+    if (!mounted || avatarUrl == null || avatarUrl.isEmpty) return;
+    safeSetState(() => _avatarUrl = avatarUrl);
+  }
+
+  /// Whichever identity the account actually logged in with — email or
+  /// phone — rather than a hardcoded placeholder for one or the other.
+  Future<void> _loadContact() async {
+    final prefs = await SharedPreferences.getInstance();
+    final channel = prefs.getString(MobileIdentityService.loginChannelKey);
+    final identifier = prefs.getString(MobileIdentityService.loginIdentifierKey);
+    if (!mounted || channel == null || identifier == null || identifier.isEmpty) {
+      return;
+    }
+    safeSetState(() {
+      _contactValue = identifier;
+      _contactIcon = channel == 'email' ? Icons.email_rounded : Icons.phone_rounded;
+    });
   }
 
   Widget _section({
@@ -268,10 +305,7 @@ class _SettingsWidgetState extends State<SettingsWidget>
               shape: BoxShape.circle,
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/images/a_avatar.png',
-                fit: BoxFit.cover,
-              ),
+              child: UserAvatar(avatarUrl: _avatarUrl),
             ),
           ),
           const SizedBox(width: 13.0),
@@ -295,42 +329,44 @@ class _SettingsWidgetState extends State<SettingsWidget>
                     fontStyle: theme.headlineSmall.fontStyle,
                   ),
                 ),
-                const SizedBox(height: 4.0),
-                Text(
-                  'User ID: E32 xxx xxx',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.76),
-                    fontSize: 10.8,
-                    fontWeight: FontWeight.w600,
+                if (_userIdDisplay.isNotEmpty) ...[
+                  const SizedBox(height: 4.0),
+                  Text(
+                    'User ID: $_userIdDisplay',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.76),
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4.0),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.phone_rounded,
-                      color: Colors.white.withValues(alpha: 0.72),
-                      size: 14.0,
-                    ),
-                    const SizedBox(width: 5.0),
-                    Text(
-                      '+234801 234 5678',
-                      style: GoogleFonts.inter(
+                ],
+                if (_contactValue.isNotEmpty) ...[
+                  const SizedBox(height: 4.0),
+                  Row(
+                    children: [
+                      Icon(
+                        _contactIcon,
                         color: Colors.white.withValues(alpha: 0.72),
-                        fontSize: 10.8,
-                        fontWeight: FontWeight.w500,
+                        size: 14.0,
                       ),
-                    ),
-                    const SizedBox(width: 4.0),
-                    Icon(
-                      Icons.close_rounded,
-                      color: Colors.white.withValues(alpha: 0.72),
-                      size: 13.0,
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 5.0),
+                      Flexible(
+                        child: Text(
+                          _contactValue,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.72),
+                            fontSize: 10.8,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
