@@ -31,4 +31,5 @@ class ApiConfig {
   static const String authOtpVerifyUrl = '$authBaseUrl/v1/users/auth/otp/verify';
   static const String authRefreshUrl = '$authBaseUrl/v1/users/auth/refresh';
   static const String authLogoutUrl = '$authBaseUrl/v1/users/auth/logout';
+  static const String userMeUrl = '$authBaseUrl/v1/users/me';
 }

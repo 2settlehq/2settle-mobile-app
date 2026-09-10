@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_details_model.dart';
 export 'profile_details_model.dart';
@@ -25,21 +29,16 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final _usernameController = TextEditingController();
   final _referralCodeController = TextEditingController();
-  final _userIdController = TextEditingController();
   bool _isSaving = false;
   bool _isSaved = false;
-  static const _profileNameStorageKey = '2settle_profile_name';
   static const _usernameStorageKey = '2settle_profile_username';
   static const _referralStorageKey = '2settle_profile_referral_code';
-  static const _userIdStorageKey = '2settle_profile_user_id';
+  String _rawUserId = '';
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => ProfileDetailsModel());
-
-    _model.yourNameTextController ??= TextEditingController();
-    _model.yourNameFocusNode ??= FocusNode();
 
     _model.emailTextController ??= TextEditingController();
     _model.emailFocusNode ??= FocusNode();
@@ -53,7 +52,6 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
   void dispose() {
     _usernameController.dispose();
     _referralCodeController.dispose();
-    _userIdController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -62,27 +60,33 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    _model.yourNameTextController?.text =
-        prefs.getString(_profileNameStorageKey) ?? 'Kayode';
     _model.emailTextController?.text = 'account@2settle.io';
-    _usernameController.text = prefs.getString(_usernameStorageKey) ?? 'kayode';
+    _usernameController.text = prefs.getString(_usernameStorageKey) ?? '';
     _referralCodeController.text = prefs.getString(_referralStorageKey) ?? '';
-    var userId = prefs.getString(_userIdStorageKey);
-    if (userId == null || userId.isEmpty) {
-      userId = '2S-${DateTime.now().millisecondsSinceEpoch}';
-      await prefs.setString(_userIdStorageKey, userId);
-    }
-    _userIdController.text = userId;
+    _rawUserId = await AuthService.getUserId() ?? '';
     safeSetState(() {});
+  }
+
+  Future<void> _copyUserId() async {
+    if (_rawUserId.isEmpty) return;
+    // Copy the full id exactly as the server returned it — no case change,
+    // no truncation, and without the 2S- prefix (that's display-only).
+    await Clipboard.setData(ClipboardData(text: _rawUserId));
+    if (!mounted) return;
+    showTopNotice(
+      context,
+      message: 'User ID copied',
+      type: TopNoticeType.info,
+    );
   }
 
   Future<void> _saveProfile() async {
     if (_isSaving) return;
-    final name = _model.yourNameTextController.text.trim();
-    if (name.isEmpty) {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
       showTopNotice(
         context,
-        message: 'Enter your name before saving.',
+        message: 'Enter a username before saving.',
         type: TopNoticeType.caution,
       );
       return;
@@ -92,10 +96,10 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
       _isSaved = false;
     });
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profileNameStorageKey, name);
-    await prefs.setString(_usernameStorageKey, _usernameController.text.trim());
+    await prefs.setString(_usernameStorageKey, username);
     await prefs.setString(
         _referralStorageKey, _referralCodeController.text.trim());
+    unawaited(AuthService.updateProfile(displayName: username));
     await Future.delayed(const Duration(milliseconds: 520));
     if (!mounted) return;
     safeSetState(() {
@@ -109,10 +113,12 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    InputDecoration profileInputDecoration(String label, {String? hint}) {
+    InputDecoration profileInputDecoration(String label,
+        {String? hint, Widget? suffixIcon}) {
       return InputDecoration(
         labelText: label,
         hintText: hint,
+        suffixIcon: suffixIcon,
         labelStyle: FlutterFlowTheme.of(context).bodySmall.override(
               color: FlutterFlowTheme.of(context).secondaryText,
               fontSize: 11.0,
@@ -252,89 +258,6 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
               ),
             ),
             Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 16.0),
-              child: TextFormField(
-                controller: _model.yourNameTextController,
-                focusNode: _model.yourNameFocusNode,
-                obscureText: false,
-                decoration: InputDecoration(
-                  labelText: 'Wálé',
-                  labelStyle: FlutterFlowTheme.of(context).bodySmall.override(
-                        font: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                        ),
-                        letterSpacing: 0.0,
-                        fontWeight: FontWeight.w500,
-                        fontStyle:
-                            FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                      ),
-                  hintStyle: FlutterFlowTheme.of(context).bodySmall.override(
-                        font: TextStyle(
-                          fontWeight:
-                              FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                        ),
-                        letterSpacing: 0.0,
-                        fontWeight:
-                            FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                        fontStyle:
-                            FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                      ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: FlutterFlowTheme.of(context).primaryBackground,
-                      width: 2.0,
-                    ),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0x00000000),
-                      width: 2.0,
-                    ),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0x00000000),
-                      width: 2.0,
-                    ),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0x00000000),
-                      width: 2.0,
-                    ),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  filled: true,
-                  fillColor: FlutterFlowTheme.of(context).secondaryBackground,
-                  contentPadding:
-                      EdgeInsetsDirectional.fromSTEB(20.0, 24.0, 0.0, 24.0),
-                ),
-                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: TextStyle(
-                        fontWeight:
-                            FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                        fontStyle:
-                            FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                      ),
-                      letterSpacing: 0.0,
-                      fontWeight:
-                          FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                      fontStyle:
-                          FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                    ),
-                maxLines: null,
-                validator:
-                    _model.yourNameTextControllerValidator.asValidator(context),
-              ),
-            ),
-            Padding(
               padding:
                   const EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 16.0),
               child: TextFormField(
@@ -363,14 +286,61 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
             Padding(
               padding:
                   const EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 16.0),
-              child: TextFormField(
-                controller: _userIdController,
-                readOnly: true,
-                decoration: profileInputDecoration('User ID'),
-                style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      letterSpacing: 0.0,
-                      fontWeight: FontWeight.w600,
+              child: Container(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                    20.0, 12.0, 8.0, 12.0),
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(
+                    color: FlutterFlowTheme.of(context).primaryBackground,
+                    width: 2.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'User ID',
+                            style: FlutterFlowTheme.of(context)
+                                .bodySmall
+                                .override(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryText,
+                                  fontSize: 11.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                          const SizedBox(height: 4.0),
+                          Text(
+                            _rawUserId.isEmpty ? '' : '2S-$_rawUserId',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.copy_rounded,
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                        size: 20.0,
+                      ),
+                      onPressed: _copyUserId,
+                    ),
+                  ],
+                ),
               ),
             ),
             Align(

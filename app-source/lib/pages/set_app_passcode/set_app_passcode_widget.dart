@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import '/components/status_action_button.dart';
 import '/components/settle_numeric_keypad.dart';
 import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -33,13 +36,18 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
   final _oldPinController = TextEditingController();
   final _newPinController = TextEditingController();
   final _confirmPinController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _oldPinFocusNode = FocusNode();
   final _newPinFocusNode = FocusNode();
   final _confirmPinFocusNode = FocusNode();
   static const _passcodeStorageKey = '2settle_app_passcode';
   static const _passcodeLengthStorageKey = '2settle_app_passcode_length';
+  // Same key profile_details_widget.dart reads/writes, so a username picked
+  // up here shows up there too.
+  static const _usernameStorageKey = '2settle_profile_username';
   bool _isSettingPin = false;
   bool _isPinSet = false;
+  bool _needsUsername = false;
   int _pinLength = 6;
 
   bool get _isResetMode => widget.mode == 'reset';
@@ -51,6 +59,7 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
     _model = createModel(context, () => SetAppPasscodeModel());
     _model.pinCodeFocusNode ??= FocusNode();
     _loadPinLength();
+    _loadUsernameState();
   }
 
   @override
@@ -58,6 +67,7 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
     _oldPinController.dispose();
     _newPinController.dispose();
     _confirmPinController.dispose();
+    _usernameController.dispose();
     _oldPinFocusNode.dispose();
     _newPinFocusNode.dispose();
     _confirmPinFocusNode.dispose();
@@ -70,6 +80,18 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
     if (!mounted) return;
     safeSetState(() {
       _pinLength = prefs.getInt(_passcodeLengthStorageKey) ?? 6;
+    });
+  }
+
+  /// Only ask for a username when creating/resetting a passcode and this
+  /// account doesn't already have one saved.
+  Future<void> _loadUsernameState() async {
+    if (_isChangeMode) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final existing = prefs.getString(_usernameStorageKey)?.trim();
+    safeSetState(() {
+      _needsUsername = existing == null || existing.isEmpty;
     });
   }
 
@@ -166,6 +188,25 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
       if (!mounted) return;
       context.pushNamed(SecurityWidget.routeName);
       return;
+    }
+    if (_needsUsername) {
+      final username = _usernameController.text.trim();
+      if (username.isEmpty) {
+        safeSetState(() {
+          _isSettingPin = false;
+          _isPinSet = false;
+        });
+        showTopNotice(
+          context,
+          message: 'Enter a username',
+          type: TopNoticeType.caution,
+        );
+        return;
+      }
+      await prefs.setString(_usernameStorageKey, username);
+      // Best-effort — if this fails, the username still shows locally, it
+      // just won't come back from the server on a future login yet.
+      unawaited(AuthService.updateProfile(displayName: username));
     }
     await prefs.setString(_passcodeStorageKey, pin);
     await prefs.setInt(_passcodeLengthStorageKey, _pinLength);
@@ -457,6 +498,61 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
                       ],
                     ),
                   ),
+                  if (_needsUsername)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                          24.0, 20.0, 24.0, 0.0),
+                      child: TextFormField(
+                        controller: _usernameController,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          hintText: 'Choose a username',
+                          labelStyle:
+                              FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill',
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
+                                    fontSize: 11.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                          hintStyle:
+                              FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill',
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
+                                    fontSize: 11.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                          filled: true,
+                          fillColor:
+                              FlutterFlowTheme.of(context).secondaryBackground,
+                          contentPadding: const EdgeInsetsDirectional.fromSTEB(
+                              16.0, 12.0, 16.0, 12.0),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: FlutterFlowTheme.of(context)
+                                  .primaryBackground,
+                              width: 2.0,
+                            ),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: FlutterFlowTheme.of(context).primary,
+                              width: 1.4,
+                            ),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(fontFamily: 'Hornbill',
+                              color: FlutterFlowTheme.of(context).primaryText,
+                              fontSize: 14.0,
+                              letterSpacing: 0.0,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
                   if (_isChangeMode)
                     Padding(
                       padding: const EdgeInsetsDirectional.fromSTEB(
