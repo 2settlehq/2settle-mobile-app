@@ -1,9 +1,11 @@
 import '/components/status_action_button.dart';
 import '/components/settle_numeric_keypad.dart';
+import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import '/services/mobile_identity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -231,6 +233,8 @@ const _countryDialCodes = [
   _CountryDialCode('🇿🇼', 'Zimbabwe', '+263'),
 ];
 
+final _emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
 class _LoginWidgetState extends State<LoginWidget> {
   late LoginModel _model;
 
@@ -261,11 +265,11 @@ class _LoginWidgetState extends State<LoginWidget> {
       case 'wallet':
         return '0x0000... or wallet address';
       case 'email':
-        return 'you@example.com';
+        return 'youremail@example.com';
       case 'google':
         return 'yourgoogle@gmail.com';
       default:
-        return '(204) 204-2056';
+        return '(+234) 345-678-9012';
     }
   }
 
@@ -559,22 +563,76 @@ class _LoginWidgetState extends State<LoginWidget> {
       return;
     }
 
+    if (_connectMethod != 'phone' && _connectMethod != 'email') {
+      showTopNotice(
+        context,
+        message:
+            '$_connectMethodLabel sign-in is coming soon. Use your phone number or email for now.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
+    final rawInput = (_model.phoneNumberTextController?.text ?? '').trim();
+    if (rawInput.isEmpty) {
+      showTopNotice(
+        context,
+        message: _connectMethod == 'email'
+            ? 'Enter your email address'
+            : 'Enter your phone number',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
+    final channel = _connectMethod == 'email' ? 'email' : 'phone';
+    final identifier = channel == 'email'
+        ? rawInput
+        : MobileIdentityService.normalizePhone(
+            rawInput,
+            dialCode: _selectedCountry.code,
+          );
+
+    if (channel == 'email' && !_emailRegex.hasMatch(identifier)) {
+      showTopNotice(
+        context,
+        message: 'Enter a valid email address',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
     safeSetState(() {
       _isContinuing = true;
       _isContinueDone = false;
     });
-    await Future.delayed(const Duration(milliseconds: 650));
+
+    final result = await AuthService.requestOtp(channel, identifier);
     if (!mounted) {
       return;
     }
+    if (!result.success) {
+      safeSetState(() {
+        _isContinuing = false;
+        _isContinueDone = false;
+      });
+      showTopNotice(
+        context,
+        message: result.error ?? 'Could not send code. Try again.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
     safeSetState(() => _isContinueDone = true);
-    await Future.delayed(const Duration(milliseconds: 450));
+    await Future.delayed(const Duration(milliseconds: 350));
     if (!mounted) {
       return;
     }
-    if (_connectMethod == 'phone') {
+    await MobileIdentityService.saveLoginIdentifier(channel, identifier);
+    if (channel == 'phone') {
       await MobileIdentityService.savePhone(
-        _model.phoneNumberTextController?.text ?? '',
+        rawInput,
         dialCode: _selectedCountry.code,
       );
     }

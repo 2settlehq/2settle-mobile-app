@@ -4,11 +4,10 @@ import {
   buildTimestamp,
   signRequest,
   pickString,
-  pickDeepString,
-  findDeepValue,
   normalizeReference,
   fetchWithTimeout,
 } from "../../lib/signing.js";
+import { verifyEndUser, callerOwnsReference } from "../../lib/endUser.js";
 
 const UPSTREAM_BASE_URL = "https://api.2settle.io/v1/payments";
 const DEFAULT_UPSTREAM_BASE_PATH = "/v1/payments";
@@ -25,13 +24,42 @@ function proxyDiagnostics(path) {
 }
 
 /**
- * Public gift-lookup endpoint (no auth, per design — used for shareable
- * receipt/claim links). Hardened: never forwards the raw upstream object,
- * only an explicit allowlist of normalized fields.
+ * Ordinary-send payment status lookup. Unlike gifts, sends have no
+ * shareable-link use case, so this always requires a verified caller who
+ * owns the reference — ownership is checked via payment-engine's existing
+ * GET /v1/users/me/payments (matched by the caller's verified phone),
+ * with no payment-engine changes needed.
  */
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return json(res, 405, { ok: false, error: "Method not allowed" });
+  }
+
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  if (!authHeader) {
+    return json(res, 401, { ok: false, error: "Authentication required." });
+  }
+
+  const endUser = await verifyEndUser(authHeader);
+  if (!endUser) {
+    return json(res, 401, { ok: false, error: "Invalid or expired session." });
+  }
+
+  const reference = normalizeReference(req.query?.reference);
+  if (!reference) {
+    return json(res, 400, {
+      ok: false,
+      error: "Valid payment reference is required. Use 2S-XXXXXX.",
+    });
+  }
+
+  const owns = await callerOwnsReference(authHeader, reference);
+  if (!owns) {
+    return json(res, 404, {
+      ok: false,
+      reference,
+      error: "Payment not found.",
+    });
   }
 
   const apiKey = cleanEnv(process.env.TWOSETTLE_API_KEY);
@@ -40,19 +68,11 @@ export default async function handler(req, res) {
   if (!apiKey || !secretKey) {
     return json(res, 500, {
       ok: false,
-      error: "Gift lookup is not configured.",
+      error: "Payment lookup is not configured.",
       missing: {
         TWOSETTLE_API_KEY: !apiKey,
         TWOSETTLE_SECRET_KEY: !secretKey,
       },
-    });
-  }
-
-  const reference = normalizeReference(req.query?.reference);
-  if (!reference) {
-    return json(res, 400, {
-      ok: false,
-      error: "Valid gift reference is required. Use 2S-XXXXXX.",
     });
   }
 
@@ -76,6 +96,7 @@ export default async function handler(req, res) {
         "x-api-key": apiKey,
         "x-timestamp": timestamp,
         "x-signature": signature,
+        authorization: authHeader,
       },
     });
     const data = await upstream.json().catch(() => ({}));
@@ -83,63 +104,36 @@ export default async function handler(req, res) {
     if (!upstream.ok) {
       return json(res, upstream.status, {
         ok: false,
-        valid: false,
         reference,
-        error: pickString(data, ["error", "message"]) || "Gift ID could not be verified.",
+        error: pickString(data, ["error", "message"]) || "Payment could not be found.",
         diagnostics: proxyDiagnostics(path),
       });
     }
 
+    const payment = data.payment || data.data || data;
     return json(res, 200, {
       ok: true,
-      valid: data.valid !== false,
       reference,
-      amount: pickDeepString(
-        data,
-        [
-          "amount",
-          "amountNgn",
-          "amount_ngn",
-          "fiatAmount",
-          "fiat_amount",
-          "settlementAmount",
-          "settlement_amount",
-          "value",
-        ],
-        ["data", "gift", "result", "payment"]
-      ),
-      currency:
-        pickDeepString(
-          data,
-          [
-            "currency",
-            "fiatCurrency",
-            "fiat_currency",
-            "settlementCurrency",
-            "settlement_currency",
-          ],
-          ["data", "gift", "result", "payment"]
-        ) || "NGN",
-      status: pickDeepString(data, ["status", "state"], ["data", "gift", "result", "payment"]),
-      claimedBankName: findDeepValue(data, [
-        "bankName",
-        "bank_name",
-        "receiverBankName",
-        "receiver_bank_name",
-        "settlementBankName",
-        "settlement_bank_name",
-        "destinationBankName",
-        "destination_bank_name",
-        "institutionName",
-      ]),
-      expiresAt: pickDeepString(data, ["expiresAt", "expires_at"], ["data", "gift", "result", "payment"]),
+      payment: {
+        reference: payment.reference || reference,
+        type: payment.type,
+        status: payment.status,
+        depositAddress: payment.depositAddress,
+        cryptoAmount: payment.cryptoAmount,
+        crypto: payment.crypto,
+        network: payment.network,
+        fiatAmount: payment.fiatAmount,
+        fiatCurrency: payment.fiatCurrency,
+        expiresAt: payment.expiresAt,
+        confirmedAt: payment.confirmedAt,
+        settledAt: payment.settledAt,
+      },
     });
   } catch {
     return json(res, 500, {
       ok: false,
-      valid: false,
       reference,
-      error: "Gift lookup failed.",
+      error: "Payment lookup failed.",
     });
   }
 }

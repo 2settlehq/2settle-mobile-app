@@ -1,76 +1,17 @@
-import crypto from "node:crypto";
+import {
+  json,
+  cleanEnv,
+  buildTimestamp,
+  signRequest,
+  pickString,
+  normalizeReference,
+  normalizeDigits,
+  fetchWithTimeout,
+} from "../../../../lib/signing.js";
+import { verifyEndUser } from "../../../../lib/endUser.js";
 
 const UPSTREAM_BASE_URL = "https://api.2settle.io/v1/payments/gifts";
 const DEFAULT_UPSTREAM_BASE_PATH = "/v1/payments/gifts";
-
-function json(res, status, body) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.status(status).json(body);
-}
-
-function cleanEnv(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^['"]|['"]$/g, "");
-}
-
-function normalizeReference(value) {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const cleaned = String(raw || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "")
-    .replace(/^2S-?/, "");
-  if (!/^[A-Z0-9]{6}$/.test(cleaned)) return null;
-  return `2S-${cleaned}`;
-}
-
-function normalizeDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function hmac(secretKey, payload, encoding = "hex") {
-  return crypto.createHmac("sha256", secretKey).update(payload).digest(encoding);
-}
-
-function buildTimestamp() {
-  const timestampUnit = cleanEnv(process.env.TWOSETTLE_TIMESTAMP_UNIT) || "milliseconds";
-  return timestampUnit === "seconds"
-    ? Math.floor(Date.now() / 1000).toString()
-    : Date.now().toString();
-}
-
-function signRequest({ secretKey, method, path, timestamp, body }) {
-  const signatureMode = cleanEnv(process.env.TWOSETTLE_SIGNATURE_MODE) || "postman-bodyhash";
-  const signatureEncoding = cleanEnv(process.env.TWOSETTLE_SIGNATURE_ENCODING) || "hex";
-
-  if (signatureMode === "postman-bodyhash") {
-    const bodyHash = crypto.createHash("sha256").update(body).digest("hex");
-    const payload = `${timestamp}|${method}|${path}|${bodyHash}`;
-    const hmacKey = crypto.createHash("sha256").update(secretKey).digest("hex");
-    const digest = hmac(hmacKey, payload, signatureEncoding);
-    return cleanEnv(process.env.TWOSETTLE_SIGNATURE_PREFIX) === "sha256"
-      ? `sha256=${digest}`
-      : digest;
-  }
-
-  const payload =
-    signatureMode === "timestamp-dot-body"
-      ? `${timestamp}.${body}`
-      : [method, path, timestamp, body].join("\n");
-  const digest = hmac(secretKey, payload, signatureEncoding);
-  return cleanEnv(process.env.TWOSETTLE_SIGNATURE_PREFIX) === "sha256"
-    ? `sha256=${digest}`
-    : digest;
-}
-
-function pickString(source, keys) {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return null;
-}
 
 function proxyDiagnostics(path) {
   return {
@@ -135,6 +76,7 @@ function buildPayloadCandidates({ bankCode, accountNumber }) {
 async function confirmClaimWithUpstream({
   apiKey,
   secretKey,
+  authHeader,
   reference,
   bankCode,
   accountNumber,
@@ -154,7 +96,7 @@ async function confirmClaimWithUpstream({
       body,
     });
 
-    const upstream = await fetch(
+    const upstream = await fetchWithTimeout(
       `${UPSTREAM_BASE_URL}/${encodedReference}/claim/confirm`,
       {
         method: "POST",
@@ -164,6 +106,7 @@ async function confirmClaimWithUpstream({
           "x-api-key": apiKey,
           "x-timestamp": timestamp,
           "x-signature": signature,
+          authorization: authHeader,
         },
         body,
       }
@@ -183,6 +126,16 @@ async function confirmClaimWithUpstream({
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return json(res, 405, { ok: false, error: "Method not allowed" });
+  }
+
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  if (!authHeader) {
+    return json(res, 401, { ok: false, error: "Authentication required." });
+  }
+
+  const endUser = await verifyEndUser(authHeader);
+  if (!endUser) {
+    return json(res, 401, { ok: false, error: "Invalid or expired session." });
   }
 
   const apiKey = cleanEnv(process.env.TWOSETTLE_API_KEY);
@@ -231,6 +184,7 @@ export default async function handler(req, res) {
     const result = await confirmClaimWithUpstream({
       apiKey,
       secretKey,
+      authHeader,
       reference,
       bankCode,
       accountNumber,

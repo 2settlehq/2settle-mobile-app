@@ -4,6 +4,8 @@ import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
+import '/services/mobile_identity_service.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -71,20 +73,21 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
       return;
     }
 
+    final code = _model.pinCodeController?.text ?? '';
+
     safeSetState(() {
       _isConfirming = true;
       _isConfirmed = false;
     });
-    await Future.delayed(const Duration(milliseconds: 750));
-    if (!mounted) {
-      return;
-    }
 
     if (_isUnlockMode) {
+      await Future.delayed(const Duration(milliseconds: 750));
+      if (!mounted) {
+        return;
+      }
       final prefs = await SharedPreferences.getInstance();
       final storedPin = prefs.getString(_passcodeStorageKey);
-      if (storedPin == null ||
-          storedPin != (_model.pinCodeController?.text ?? '')) {
+      if (storedPin == null || storedPin != code) {
         safeSetState(() {
           _isConfirming = false;
           _isConfirmed = false;
@@ -92,6 +95,28 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
         showTopNotice(
           context,
           message: 'Incorrect passcode',
+          type: TopNoticeType.caution,
+        );
+        return;
+      }
+    } else {
+      final login = await MobileIdentityService.getLoginIdentifier();
+      final result = await AuthService.verifyOtp(
+        login.channel,
+        login.identifier,
+        code,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!result.success) {
+        safeSetState(() {
+          _isConfirming = false;
+          _isConfirmed = false;
+        });
+        showTopNotice(
+          context,
+          message: result.error ?? 'Incorrect code. Try again.',
           type: TopNoticeType.caution,
         );
         return;

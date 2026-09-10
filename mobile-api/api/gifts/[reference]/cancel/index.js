@@ -1,76 +1,16 @@
-import crypto from "node:crypto";
+import {
+  json,
+  cleanEnv,
+  buildTimestamp,
+  signRequest,
+  pickString,
+  normalizeReference,
+  fetchWithTimeout,
+} from "../../../../lib/signing.js";
+import { verifyEndUser, callerOwnsReference } from "../../../../lib/endUser.js";
 
 const UPSTREAM_BASE_URL = "https://api.2settle.io/v1/payment";
 const DEFAULT_UPSTREAM_BASE_PATH = "/v1/payment";
-
-function json(res, status, body) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.status(status).json(body);
-}
-
-function cleanEnv(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^['"]|['"]$/g, "");
-}
-
-function normalizeReference(value) {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const cleaned = String(raw || "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "")
-    .replace(/^2S-?/, "");
-  if (!/^[A-Z0-9]{6}$/.test(cleaned)) return null;
-  return `2S-${cleaned}`;
-}
-
-function hmac(secretKey, payload, encoding = "hex") {
-  return crypto.createHmac("sha256", secretKey).update(payload).digest(encoding);
-}
-
-function buildTimestamp() {
-  const timestampUnit =
-    cleanEnv(process.env.TWOSETTLE_TIMESTAMP_UNIT) || "milliseconds";
-  return timestampUnit === "seconds"
-    ? Math.floor(Date.now() / 1000).toString()
-    : Date.now().toString();
-}
-
-function signRequest({ secretKey, method, path, timestamp, body }) {
-  const signatureMode =
-    cleanEnv(process.env.TWOSETTLE_SIGNATURE_MODE) || "postman-bodyhash";
-  const signatureEncoding =
-    cleanEnv(process.env.TWOSETTLE_SIGNATURE_ENCODING) || "hex";
-
-  if (signatureMode === "postman-bodyhash") {
-    const bodyHash = crypto.createHash("sha256").update(body).digest("hex");
-    const payload = `${timestamp}|${method}|${path}|${bodyHash}`;
-    const hmacKey = crypto.createHash("sha256").update(secretKey).digest("hex");
-    const digest = hmac(hmacKey, payload, signatureEncoding);
-    return cleanEnv(process.env.TWOSETTLE_SIGNATURE_PREFIX) === "sha256"
-      ? `sha256=${digest}`
-      : digest;
-  }
-
-  const payload =
-    signatureMode === "timestamp-dot-body"
-      ? `${timestamp}.${body}`
-      : [method, path, timestamp, body].join("\n");
-  const digest = hmac(secretKey, payload, signatureEncoding);
-  return cleanEnv(process.env.TWOSETTLE_SIGNATURE_PREFIX) === "sha256"
-    ? `sha256=${digest}`
-    : digest;
-}
-
-function pickString(source, keys) {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-    if (typeof value === "number") return String(value);
-  }
-  return null;
-}
 
 function proxyDiagnostics(path) {
   return {
@@ -91,6 +31,33 @@ export default async function handler(req, res) {
     return json(res, 405, { ok: false, error: "Method not allowed" });
   }
 
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  if (!authHeader) {
+    return json(res, 401, { ok: false, error: "Authentication required." });
+  }
+
+  const endUser = await verifyEndUser(authHeader);
+  if (!endUser) {
+    return json(res, 401, { ok: false, error: "Invalid or expired session." });
+  }
+
+  const reference = normalizeReference(req.query?.reference);
+  if (!reference) {
+    return json(res, 400, {
+      ok: false,
+      error: "Valid gift reference is required. Use 2S-XXXXXX.",
+    });
+  }
+
+  const owns = await callerOwnsReference(authHeader, reference);
+  if (!owns) {
+    return json(res, 403, {
+      ok: false,
+      reference,
+      error: "You do not have permission to cancel this payment.",
+    });
+  }
+
   const apiKey = cleanEnv(process.env.TWOSETTLE_API_KEY);
   const secretKey = cleanEnv(process.env.TWOSETTLE_SECRET_KEY);
 
@@ -102,14 +69,6 @@ export default async function handler(req, res) {
         TWOSETTLE_API_KEY: !apiKey,
         TWOSETTLE_SECRET_KEY: !secretKey,
       },
-    });
-  }
-
-  const reference = normalizeReference(req.query?.reference);
-  if (!reference) {
-    return json(res, 400, {
-      ok: false,
-      error: "Valid gift reference is required. Use 2S-XXXXXX.",
     });
   }
 
@@ -126,7 +85,7 @@ export default async function handler(req, res) {
   });
 
   try {
-    const upstream = await fetch(
+    const upstream = await fetchWithTimeout(
       `${UPSTREAM_BASE_URL}/${encodedReference}/cancel`,
       {
         method: "POST",
@@ -136,6 +95,7 @@ export default async function handler(req, res) {
           "x-api-key": apiKey,
           "x-timestamp": timestamp,
           "x-signature": signature,
+          authorization: authHeader,
         },
         body,
       }
