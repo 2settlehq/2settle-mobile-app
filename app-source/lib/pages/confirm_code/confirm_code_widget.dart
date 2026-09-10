@@ -128,12 +128,25 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
     if (!mounted) {
       return;
     }
+
+    // A plain login only needs a new app passcode if this device doesn't
+    // already have one (e.g. it was wiped, or the refresh token just
+    // expired and forced a re-login on an already-set-up device).
+    var hasPasscode = false;
+    if (!_isUnlockMode && !_isRecoveryMode) {
+      final prefs = await SharedPreferences.getInstance();
+      final storedPin = prefs.getString(_passcodeStorageKey);
+      hasPasscode = storedPin != null && storedPin.isNotEmpty;
+    }
+
     await context.pushNamed(
       _isUnlockMode
           ? DashboardWidget.routeName
           : _isRecoveryMode
               ? SetAppPasscodeWidget.routeName
-              : SetAppPasscodeWidget.routeName,
+              : hasPasscode
+                  ? DashboardWidget.routeName
+                  : SetAppPasscodeWidget.routeName,
       queryParameters: _isRecoveryMode ? {'mode': 'reset'} : {},
     );
     if (!mounted) return;

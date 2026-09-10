@@ -980,9 +980,11 @@ class _DashboardWidgetState extends State<DashboardWidget>
 
   Future<void> _loadProfileName() async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('2settle_profile_name')?.trim();
+    final stored = prefs.getString('2settle_profile_username')?.trim();
     if (!mounted || stored == null || stored.isEmpty) return;
-    safeSetState(() => _displayName = stored.split(RegExp(r'\s+')).first);
+    final firstWord = stored.split(RegExp(r'\s+')).first;
+    safeSetState(() => _displayName =
+        '${firstWord[0].toUpperCase()}${firstWord.substring(1)}');
   }
 
   @override
