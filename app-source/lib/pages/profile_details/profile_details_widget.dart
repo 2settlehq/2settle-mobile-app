@@ -5,6 +5,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
+import '/components/user_avatar.dart';
 import '/index.dart';
 import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +35,7 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
   static const _usernameStorageKey = '2settle_profile_username';
   static const _referralStorageKey = '2settle_profile_referral_code';
   String _rawUserId = '';
+  String _avatarUrl = '';
 
   @override
   void initState() {
@@ -64,6 +66,7 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
     _usernameController.text = prefs.getString(_usernameStorageKey) ?? '';
     _referralCodeController.text = prefs.getString(_referralStorageKey) ?? '';
     _rawUserId = await AuthService.getUserId() ?? '';
+    _avatarUrl = await AuthService.getAvatarUrl() ?? '';
     safeSetState(() {});
   }
 
@@ -221,8 +224,8 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                         ),
-                        child: Image.asset(
-                          'assets/images/a_avatar.png',
+                        child: UserAvatar(
+                          avatarUrl: _avatarUrl,
                           fit: BoxFit.fitWidth,
                         ),
                       ),
