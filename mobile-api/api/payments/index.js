@@ -1,78 +1,29 @@
-import crypto from "node:crypto";
+import {
+  json,
+  cleanEnv,
+  buildTimestamp,
+  signRequest,
+  pickString,
+  fetchWithTimeout,
+} from "../../lib/signing.js";
+import { verifyEndUser } from "../../lib/endUser.js";
 
 const UPSTREAM_URL = "https://api.2settle.io/v1/payments";
 const DEFAULT_UPSTREAM_PATH = "/v1/payments";
 
-function json(res, status, body) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.status(status).json(body);
-}
-
-function cleanEnv(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^['"]|['"]$/g, "");
-}
-
-function hmac(secretKey, payload, encoding = "hex") {
-  return crypto.createHmac("sha256", secretKey).update(payload).digest(encoding);
-}
-
-function buildTimestamp() {
-  const timestampUnit =
-    cleanEnv(process.env.TWOSETTLE_TIMESTAMP_UNIT) || "milliseconds";
-  return timestampUnit === "seconds"
-    ? Math.floor(Date.now() / 1000).toString()
-    : Date.now().toString();
-}
-
-function signRequest({ secretKey, method, path, timestamp, body }) {
-  const signatureMode =
-    cleanEnv(process.env.TWOSETTLE_SIGNATURE_MODE) || "postman-bodyhash";
-  const signatureEncoding =
-    cleanEnv(process.env.TWOSETTLE_SIGNATURE_ENCODING) || "hex";
-
-  if (signatureMode === "postman-bodyhash") {
-    const bodyHash = crypto.createHash("sha256").update(body).digest("hex");
-    const payload = `${timestamp}|${method}|${path}|${bodyHash}`;
-    const hmacKey = crypto.createHash("sha256").update(secretKey).digest("hex");
-    const digest = hmac(hmacKey, payload, signatureEncoding);
-    return cleanEnv(process.env.TWOSETTLE_SIGNATURE_PREFIX) === "sha256"
-      ? `sha256=${digest}`
-      : digest;
-  }
-
-  const payload =
-    signatureMode === "timestamp-dot-body"
-      ? `${timestamp}.${body}`
-      : [method, path, timestamp, body].join("\n");
-  const digest = hmac(secretKey, payload, signatureEncoding);
-  return cleanEnv(process.env.TWOSETTLE_SIGNATURE_PREFIX) === "sha256"
-    ? `sha256=${digest}`
-    : digest;
-}
-
-function pickString(source, keys) {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-    if (typeof value === "number") return String(value);
-  }
-  return null;
-}
-
-function normalizePayload(body) {
-  const payer = body?.payer || {};
+function normalizePayload(body, endUser) {
   return {
     type: body?.type || "gift",
-    fiatAmount: Number(body?.fiatAmount || 0),
+    fiatAmount: Number(body?.fiatAmount),
     chargeFrom: body?.chargeFrom || "fiat",
     fiatCurrency: body?.fiatCurrency || "NGN",
     crypto: body?.crypto || "USDT",
     network: body?.network || "erc20",
+    // Payer identity is derived from the verified caller, never trusted
+    // from the client — closes the "anyone can claim any identity" gap.
     payer: {
-      chatId: String(payer.chatId || "7389201648"),
-      phone: String(payer.phone || "2348067426882"),
+      chatId: endUser.id,
+      phone: endUser.phone,
     },
   };
 }
@@ -96,6 +47,22 @@ export default async function handler(req, res) {
     return json(res, 405, { ok: false, error: "Method not allowed" });
   }
 
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  if (!authHeader) {
+    return json(res, 401, { ok: false, error: "Authentication required." });
+  }
+
+  const endUser = await verifyEndUser(authHeader);
+  if (!endUser) {
+    return json(res, 401, { ok: false, error: "Invalid or expired session." });
+  }
+  if (!endUser.phone) {
+    return json(res, 400, {
+      ok: false,
+      error: "Your account has no verified phone number.",
+    });
+  }
+
   const apiKey = cleanEnv(process.env.TWOSETTLE_API_KEY);
   const secretKey = cleanEnv(process.env.TWOSETTLE_SECRET_KEY);
 
@@ -110,8 +77,8 @@ export default async function handler(req, res) {
     });
   }
 
-  const payload = normalizePayload(req.body || {});
-  if (!payload.fiatAmount || payload.fiatAmount <= 0) {
+  const payload = normalizePayload(req.body || {}, endUser);
+  if (!Number.isFinite(payload.fiatAmount) || payload.fiatAmount <= 0) {
     return json(res, 400, {
       ok: false,
       error: "Valid fiatAmount is required.",
@@ -131,7 +98,7 @@ export default async function handler(req, res) {
   });
 
   try {
-    const upstream = await fetch(UPSTREAM_URL, {
+    const upstream = await fetchWithTimeout(UPSTREAM_URL, {
       method: "POST",
       headers: {
         accept: "application/json",
@@ -139,6 +106,7 @@ export default async function handler(req, res) {
         "x-api-key": apiKey,
         "x-timestamp": timestamp,
         "x-signature": signature,
+        authorization: authHeader,
       },
       body,
     });

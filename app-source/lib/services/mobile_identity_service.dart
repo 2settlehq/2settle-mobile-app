@@ -6,6 +6,8 @@ class MobileIdentityService {
   static const mobileIdKey = '2settle_mobile_id';
   static const phoneKey = '2settle_user_phone';
   static const fallbackPhone = '2348067426882';
+  static const loginChannelKey = '2settle_login_channel';
+  static const loginIdentifierKey = '2settle_login_identifier';
 
   static Future<String> getOrCreateMobileId() async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,6 +37,24 @@ class MobileIdentityService {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(phoneKey)?.trim();
     return stored == null || stored.isEmpty ? fallbackPhone : stored;
+  }
+
+  /// Remembers which channel/identifier a login OTP was requested for, so
+  /// the confirm-code screen knows what to verify against.
+  static Future<void> saveLoginIdentifier(String channel, String identifier) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(loginChannelKey, channel);
+    await prefs.setString(loginIdentifierKey, identifier);
+  }
+
+  static Future<({String channel, String identifier})> getLoginIdentifier() async {
+    final prefs = await SharedPreferences.getInstance();
+    final channel = prefs.getString(loginChannelKey);
+    final identifier = prefs.getString(loginIdentifierKey);
+    if (channel == null || identifier == null || identifier.isEmpty) {
+      return (channel: 'phone', identifier: fallbackPhone);
+    }
+    return (channel: channel, identifier: identifier);
   }
 
   static String normalizePhone(String rawPhone, {String dialCode = '+234'}) {
