@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'settings_model.dart';
 export 'settings_model.dart';
 
@@ -68,6 +69,24 @@ class _SettingsWidgetState extends State<SettingsWidget>
     _model.dispose();
 
     super.dispose();
+  }
+
+  Future<void> _openLegalPage(String path) async {
+    final uri = Uri.https('spend.2settle.io', path);
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.inAppBrowserView)) return;
+    } catch (_) {
+      // Try the default browser when an in-app browser is unavailable.
+    }
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // Report launch failures without interrupting Settings.
+    }
+    if (!mounted) return;
+    showTopNotice(context,
+        message: 'Unable to open this page. Please try again.',
+        type: TopNoticeType.caution);
   }
 
   void _openTab(int index) {
@@ -586,7 +605,13 @@ class _SettingsWidgetState extends State<SettingsWidget>
                   ),
                   _settingsRow(
                     icon: Icons.privacy_tip_rounded,
-                    title: 'Terms of Service',
+                    title: 'Privacy Policy',
+                    onTap: () => _openLegalPage('/privacy'),
+                  ),
+                  _settingsRow(
+                    icon: Icons.description_outlined,
+                    title: 'Terms & Conditions',
+                    onTap: () => _openLegalPage('/terms'),
                     showDivider: false,
                   ),
                 ],
