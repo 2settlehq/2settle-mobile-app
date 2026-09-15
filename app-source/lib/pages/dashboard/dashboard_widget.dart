@@ -4,6 +4,7 @@ import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1226,7 +1227,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
                       hoverColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       onTap: () async {
-                        context.pushNamed(LoginWidget.routeName);
+                        await AuthService.logout();
+                        if (!context.mounted) return;
+                        context.goNamed(LoginWidget.routeName);
                       },
                       borderRadius: BorderRadius.circular(18.0),
                       child: Container(

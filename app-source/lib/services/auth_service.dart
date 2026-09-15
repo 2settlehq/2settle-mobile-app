@@ -1,9 +1,13 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '/config/api_config.dart';
+import '/flutter_flow/nav/nav.dart';
+import 'mobile_identity_service.dart';
+import 'pin_service.dart';
 
 class AuthResult {
   const AuthResult.success() : success = true, error = null;
@@ -16,8 +20,11 @@ class AuthResult {
 class AuthService {
   AuthService._();
 
+  static const _secureStorage = FlutterSecureStorage();
   static const _accessTokenKey = '2settle_access_token';
   static const _refreshTokenKey = '2settle_refresh_token';
+
+  // Profile display fields aren't secrets, so they stay in SharedPreferences.
   static const _userIdKey = '2settle_auth_user_id';
   // Same key profile_details_widget.dart / set_app_passcode_widget.dart
   // read and write, so a name synced here shows up there too.
@@ -115,6 +122,104 @@ class AuthService {
     await clearSession();
   }
 
+  /// Calls the backend refresh endpoint and rotates the stored tokens.
+  /// Returns `true` on success. On a definitive rejection (refresh token
+  /// itself invalid/expired) this clears the session and returns `false`,
+  /// forcing a full re-login rather than leaving stale tokens in place. A
+  /// transient network failure also returns `false` but does NOT clear the
+  /// session, so a flaky connection can't strand a user mid-session.
+  static Future<bool> refreshAccessToken() async {
+    final refreshToken = await getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+    try {
+      final response = await http
+          .post(
+            Uri.parse(ApiConfig.authRefreshUrl),
+            headers: const {
+              'accept': 'application/json',
+              'content-type': 'application/json',
+            },
+            body: jsonEncode({'refreshToken': refreshToken}),
+          )
+          .timeout(const Duration(seconds: 12));
+      final payload = _decode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = payload['data'] is Map ? payload['data'] as Map : payload;
+        final newAccessToken = data['accessToken']?.toString();
+        final newRefreshToken = data['refreshToken']?.toString();
+        if (newAccessToken == null || newAccessToken.isEmpty) {
+          return false;
+        }
+        await _saveSession(
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        );
+        return true;
+      }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        // Refresh token is dead — there's no recovering this session.
+        await clearSession();
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Checks whether the current access token is still accepted by the
+  /// server, transparently refreshing once if it's expired. Returns:
+  /// - `true`  — session confirmed valid (possibly after a refresh).
+  /// - `false` — session is definitively invalid; the session has already
+  ///   been cleared, and the caller should force a full re-login.
+  /// - `null`  — couldn't reach the server; treat as inconclusive rather
+  ///   than punishing the user for a flaky connection.
+  static Future<bool?> validateSession() async {
+    var accessToken = await getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      return false;
+    }
+    try {
+      var response = await _getMe(accessToken);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (!refreshed) {
+          return false;
+        }
+        accessToken = await getAccessToken();
+        if (accessToken == null || accessToken.isEmpty) {
+          return false;
+        }
+        response = await _getMe(accessToken);
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return true;
+        }
+        if (response.statusCode == 401) {
+          await clearSession();
+          return false;
+        }
+        return null;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<http.Response> _getMe(String accessToken) {
+    return http.get(
+      Uri.parse(ApiConfig.userMeUrl),
+      headers: {
+        'accept': 'application/json',
+        'authorization': 'Bearer $accessToken',
+      },
+    ).timeout(const Duration(seconds: 12));
+  }
+
   static Future<void> _saveSession({
     String? accessToken,
     String? refreshToken,
@@ -122,13 +227,13 @@ class AuthService {
     String? displayName,
     String? avatarUrl,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
     if (accessToken != null && accessToken.isNotEmpty) {
-      await prefs.setString(_accessTokenKey, accessToken);
+      await _secureStorage.write(key: _accessTokenKey, value: accessToken);
     }
     if (refreshToken != null && refreshToken.isNotEmpty) {
-      await prefs.setString(_refreshTokenKey, refreshToken);
+      await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
     }
+    final prefs = await SharedPreferences.getInstance();
     if (userId != null && userId.isNotEmpty) {
       await prefs.setString(_userIdKey, userId);
     }
@@ -140,22 +245,32 @@ class AuthService {
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       await prefs.setString(_avatarUrlKey, avatarUrl);
     }
+    // A valid token was just issued — the router's auth gate should open.
+    AppStateNotifier.instance.setAppSessionActive(true);
   }
 
+  /// Clears everything tied to the signed-in account: tokens, cached
+  /// profile, the local device PIN, and the last-used login identifier.
+  /// A "signed out" device should look like a fresh install, not still
+  /// show the previous user's name/avatar or unlock with their old PIN.
   static Future<void> clearSession() async {
+    await _secureStorage.delete(key: _accessTokenKey);
+    await _secureStorage.delete(key: _refreshTokenKey);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_accessTokenKey);
-    await prefs.remove(_refreshTokenKey);
+    await prefs.remove(_userIdKey);
+    await prefs.remove(_usernameKey);
+    await prefs.remove(_avatarUrlKey);
+    await PinService.clearPin();
+    await MobileIdentityService.clearIdentity();
+    AppStateNotifier.instance.setAppSessionActive(false);
   }
 
-  static Future<String?> getAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_accessTokenKey);
+  static Future<String?> getAccessToken() {
+    return _secureStorage.read(key: _accessTokenKey);
   }
 
-  static Future<String?> getRefreshToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_refreshTokenKey);
+  static Future<String?> getRefreshToken() {
+    return _secureStorage.read(key: _refreshTokenKey);
   }
 
   /// The account's raw UUID from the server, as returned in the login
