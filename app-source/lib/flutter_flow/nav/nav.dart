@@ -28,6 +28,21 @@ class AppStateNotifier extends ChangeNotifier {
   bool showSplashImage = true;
   String? _redirectLocation;
 
+  /// Whether the real 2Settle backend session (OTP login + app-PIN unlock,
+  /// see AuthService/PinService) is active for this app launch. This is
+  /// the actual auth signal for this app's route guards — [user]/Firebase
+  /// auth state is legacy FlutterFlow scaffolding the real login flow
+  /// never touches, so `loggedIn` below is OR'd with this instead of
+  /// relying on Firebase alone. Defaults to false on every cold start, so
+  /// a direct deep link into an authenticated route can't skip the
+  /// unlock/login screens.
+  bool _appSessionActive = false;
+  void setAppSessionActive(bool active) {
+    if (_appSessionActive == active) return;
+    _appSessionActive = active;
+    notifyListeners();
+  }
+
   /// Determines whether the app will refresh and build again when a sign
   /// in or sign out happens. This is useful when the app is launched or
   /// on an unexpected logout. However, this must be turned off when we
@@ -36,7 +51,7 @@ class AppStateNotifier extends ChangeNotifier {
   bool notifyOnAuthChange = true;
 
   bool get loading => user == null || showSplashImage;
-  bool get loggedIn => user?.loggedIn ?? false;
+  bool get loggedIn => (user?.loggedIn ?? false) || _appSessionActive;
   bool get initiallyLoggedIn => initialUser?.loggedIn ?? false;
   bool get shouldRedirect => loggedIn && _redirectLocation != null;
 
@@ -98,46 +113,55 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: MainTransactionWidget.routeName,
               path: MainTransactionWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => MainTransactionWidget(),
             ),
             FFRoute(
               name: SettingsWidget.routeName,
               path: SettingsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => SettingsWidget(),
             ),
             FFRoute(
               name: AccountWidget.routeName,
               path: AccountWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => AccountWidget(),
             ),
             FFRoute(
               name: AllServicesWidget.routeName,
               path: AllServicesWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => AllServicesWidget(),
             ),
             FFRoute(
               name: WaleSpendWidget.routeName,
               path: WaleSpendWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => WaleSpendWidget(),
             ),
             FFRoute(
               name: GiftWidget.routeName,
               path: GiftWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => GiftWidget(),
             ),
             FFRoute(
               name: ClaimGiftWidget.routeName,
               path: ClaimGiftWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ClaimGiftWidget(),
             ),
             FFRoute(
               name: CreateGiftWidget.routeName,
               path: CreateGiftWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => CreateGiftWidget(),
             ),
             FFRoute(
               name: GiftCreatedWidget.routeName,
               path: GiftCreatedWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => GiftCreatedWidget(
                 amount: params.getParam<String>(
                       'amount',
@@ -209,6 +233,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: ConfirmGiftClaimWidget.routeName,
               path: ConfirmGiftClaimWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ConfirmGiftClaimWidget(
                 reference: params.getParam<String>(
                       'reference',
@@ -245,6 +270,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: GiftClaimDetailsWidget.routeName,
               path: GiftClaimDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => GiftClaimDetailsWidget(
                 reference: params.getParam<String>(
                       'reference',
@@ -361,11 +387,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: SecurityWidget.routeName,
               path: SecurityWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => SecurityWidget(),
             ),
             FFRoute(
               name: SetAppPasscodeWidget.routeName,
               path: SetAppPasscodeWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => SetAppPasscodeWidget(
                 mode: params.getParam<String>(
                       'mode',
@@ -377,26 +405,31 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: NotificationSettingsWidget.routeName,
               path: NotificationSettingsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => NotificationSettingsWidget(),
             ),
             FFRoute(
               name: NotificationsWidget.routeName,
               path: NotificationsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => NotificationsWidget(),
             ),
             FFRoute(
               name: VersionHistoryWidget.routeName,
               path: VersionHistoryWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => VersionHistoryWidget(),
             ),
             FFRoute(
               name: HistoryWidget.routeName,
               path: HistoryWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => HistoryWidget(),
             ),
             FFRoute(
               name: TransactionDetailsWidget.routeName,
               path: TransactionDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => TransactionDetailsWidget(
                 id: params.getParam<String>(
                       'id',
@@ -458,6 +491,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: ConfirmationPageWidget.routeName,
               path: ConfirmationPageWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ConfirmationPageWidget(
                 settlementAmount: params.getParam<String>(
                       'settlementAmount',
@@ -504,11 +538,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: ProfileDetailsWidget.routeName,
               path: ProfileDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ProfileDetailsWidget(),
             ),
             FFRoute(
               name: AccountDetailsWidget.routeName,
               path: AccountDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => AccountDetailsWidget(
                 origin: params.getParam<String>(
                       'origin',
@@ -542,36 +578,43 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: DashboardWidget.routeName,
               path: DashboardWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => DashboardWidget(),
             ),
             FFRoute(
               name: PayPageWidget.routeName,
               path: PayPageWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => PayPageWidget(),
             ),
             FFRoute(
               name: ReceivePaymentDetailsWidget.routeName,
               path: ReceivePaymentDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ReceivePaymentDetailsWidget(),
             ),
             FFRoute(
               name: ReceiveNairaAccountWidget.routeName,
               path: ReceiveNairaAccountWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ReceiveNairaAccountWidget(),
             ),
             FFRoute(
               name: ReceiveDollarAccountWidget.routeName,
               path: ReceiveDollarAccountWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ReceiveDollarAccountWidget(),
             ),
             FFRoute(
               name: ReceiveCryptoWalletWidget.routeName,
               path: ReceiveCryptoWalletWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ReceiveCryptoWalletWidget(),
             ),
             FFRoute(
               name: ReceiveRequestDetailsWidget.routeName,
               path: ReceiveRequestDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ReceiveRequestDetailsWidget(
                 requestId: params.getParam<String>(
                       'requestId',
@@ -583,21 +626,25 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: ConvertWidget.routeName,
               path: ConvertWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ConvertWidget(),
             ),
             FFRoute(
               name: MyCardsWidget.routeName,
               path: MyCardsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => MyCardsWidget(),
             ),
             FFRoute(
               name: CardDetailsWidget.routeName,
               path: CardDetailsWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => CardDetailsWidget(),
             ),
             FFRoute(
               name: ReceiveFundingWidget.routeName,
               path: ReceiveFundingWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ReceiveFundingWidget(
                 settlementAmount: params.getParam<String>(
                       'settlementAmount',
@@ -689,6 +736,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
             FFRoute(
               name: ConfirmTransactionWidget.routeName,
               path: ConfirmTransactionWidget.routePath,
+              requireAuth: true,
               builder: (context, params) => ConfirmTransactionWidget(
                 settlementAmount: params.getParam<String>(
                       'settlementAmount',

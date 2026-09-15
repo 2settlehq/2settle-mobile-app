@@ -6,10 +6,10 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import '/services/auth_service.dart';
 import '/services/mobile_identity_service.dart';
+import '/services/pin_service.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'confirm_code_model.dart';
 export 'confirm_code_model.dart';
 
@@ -32,8 +32,6 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
   late ConfirmCodeModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  static const _passcodeStorageKey = '2settle_app_passcode';
-  static const _passcodeLengthStorageKey = '2settle_app_passcode_length';
   bool _isConfirming = false;
   bool _isConfirmed = false;
   int _passcodeLength = 6;
@@ -58,13 +56,10 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
   }
 
   Future<void> _loadPasscodeLength() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedPin = prefs.getString(_passcodeStorageKey) ?? '';
+    final length = await PinService.getPinLength();
     if (!mounted) return;
     safeSetState(() {
-      _passcodeLength = storedPin.isNotEmpty
-          ? storedPin.length
-          : prefs.getInt(_passcodeLengthStorageKey) ?? 6;
+      _passcodeLength = length;
     });
   }
 
@@ -85,20 +80,42 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
       if (!mounted) {
         return;
       }
-      final prefs = await SharedPreferences.getInstance();
-      final storedPin = prefs.getString(_passcodeStorageKey);
-      if (storedPin == null || storedPin != code) {
+      final verify = await PinService.verifyPin(code);
+      if (!verify.isSuccess) {
         safeSetState(() {
           _isConfirming = false;
           _isConfirmed = false;
         });
         showTopNotice(
           context,
-          message: 'Incorrect passcode',
+          message: verify.status == PinVerifyStatus.lockedOut
+              ? 'Too many attempts. Try again in ${verify.lockoutSeconds}s.'
+              : verify.remainingAttempts != null
+                  ? 'Incorrect passcode (${verify.remainingAttempts} attempts left).'
+                  : 'Incorrect passcode',
           type: TopNoticeType.caution,
         );
         return;
       }
+
+      // The PIN only unlocks the device — it doesn't re-prove the backend
+      // session is still valid, so check that too before granting access.
+      final sessionValid = await AuthService.validateSession();
+      if (!mounted) return;
+      if (sessionValid == false) {
+        safeSetState(() {
+          _isConfirming = false;
+          _isConfirmed = false;
+        });
+        showTopNotice(
+          context,
+          message: 'Your session has expired. Please sign in again.',
+          type: TopNoticeType.caution,
+        );
+        context.goNamed(LoginWidget.routeName);
+        return;
+      }
+      AppStateNotifier.instance.setAppSessionActive(true);
     } else {
       final login = await MobileIdentityService.getLoginIdentifier();
       final result = await AuthService.verifyOtp(
@@ -134,9 +151,7 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
     // expired and forced a re-login on an already-set-up device).
     var hasPasscode = false;
     if (!_isUnlockMode && !_isRecoveryMode) {
-      final prefs = await SharedPreferences.getInstance();
-      final storedPin = prefs.getString(_passcodeStorageKey);
-      hasPasscode = storedPin != null && storedPin.isNotEmpty;
+      hasPasscode = await PinService.hasPin();
     }
 
     await context.pushNamed(

@@ -402,7 +402,11 @@ class _SettingsWidgetState extends State<SettingsWidget>
           _quickAction(
             icon: Icons.logout_rounded,
             label: 'Sign out',
-            onTap: () => context.pushNamed(LoginWidget.routeName),
+            onTap: () async {
+              await AuthService.logout();
+              if (!context.mounted) return;
+              context.goNamed(LoginWidget.routeName);
+            },
           ),
           const SizedBox(width: 9.0),
           _quickAction(

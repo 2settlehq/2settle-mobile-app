@@ -2,9 +2,9 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/pin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'security_model.dart';
 export 'security_model.dart';
 
@@ -21,7 +21,6 @@ class SecurityWidget extends StatefulWidget {
 class _SecurityWidgetState extends State<SecurityWidget> {
   late SecurityModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  static const _passcodeLengthStorageKey = '2settle_app_passcode_length';
   int _pinLength = 6;
 
   @override
@@ -38,16 +37,15 @@ class _SecurityWidgetState extends State<SecurityWidget> {
   }
 
   Future<void> _loadPinLength() async {
-    final prefs = await SharedPreferences.getInstance();
+    final length = await PinService.getPinLength();
     if (!mounted) return;
     safeSetState(() {
-      _pinLength = prefs.getInt(_passcodeLengthStorageKey) ?? 6;
+      _pinLength = length;
     });
   }
 
   Future<void> _setPinLength(int length) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_passcodeLengthStorageKey, length);
+    await PinService.setPreferredPinLength(length);
     if (!mounted) return;
     safeSetState(() => _pinLength = length);
   }

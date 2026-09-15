@@ -57,6 +57,17 @@ class MobileIdentityService {
     return (channel: channel, identifier: identifier);
   }
 
+  /// Clears the previous account's phone/login identifier on sign-out.
+  /// Deliberately keeps [mobileIdKey] — that's a stable per-device
+  /// identifier, not account-identifying data, and losing it would change
+  /// the chat/device id gift flows key off of.
+  static Future<void> clearIdentity() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(phoneKey);
+    await prefs.remove(loginChannelKey);
+    await prefs.remove(loginIdentifierKey);
+  }
+
   static String normalizePhone(String rawPhone, {String dialCode = '+234'}) {
     var phone = rawPhone.replaceAll(RegExp(r'\D'), '');
     final code = dialCode.replaceAll(RegExp(r'\D'), '');

@@ -3,9 +3,9 @@ import 'dart:async';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/pin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'splash_screen_model.dart';
 export 'splash_screen_model.dart';
 
@@ -26,7 +26,6 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
   static const _typedMessage = 'Spend and send money easily\nwith 2Settle';
   static const _appVersionLabel = '2Settle V2.36.38';
-  static const _passcodeStorageKey = '2settle_app_passcode';
   Timer? _typingTimer;
   String _visibleTypedMessage = '';
 
@@ -56,8 +55,7 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
   }
 
   Future<void> _openNextScreen() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasPasscode = (prefs.getString(_passcodeStorageKey) ?? '').isNotEmpty;
+    final hasPasscode = await PinService.hasPin();
     if (!mounted) return;
 
     if (hasPasscode) {

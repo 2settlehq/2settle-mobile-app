@@ -7,6 +7,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import '/services/auth_service.dart';
+import '/services/pin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -40,8 +41,6 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
   final _oldPinFocusNode = FocusNode();
   final _newPinFocusNode = FocusNode();
   final _confirmPinFocusNode = FocusNode();
-  static const _passcodeStorageKey = '2settle_app_passcode';
-  static const _passcodeLengthStorageKey = '2settle_app_passcode_length';
   // Same key profile_details_widget.dart reads/writes, so a username picked
   // up here shows up there too.
   static const _usernameStorageKey = '2settle_profile_username';
@@ -76,10 +75,10 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
   }
 
   Future<void> _loadPinLength() async {
-    final prefs = await SharedPreferences.getInstance();
+    final length = await PinService.getPinLength();
     if (!mounted) return;
     safeSetState(() {
-      _pinLength = prefs.getInt(_passcodeLengthStorageKey) ?? 6;
+      _pinLength = length;
     });
   }
 
@@ -133,22 +132,26 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
     }
     final prefs = await SharedPreferences.getInstance();
     if (_isChangeMode) {
-      final storedPin = prefs.getString(_passcodeStorageKey) ?? '';
       final oldPin = _oldPinController.text;
       final newPin = _newPinController.text;
       final confirmPin = _confirmPinController.text;
 
-      if (storedPin.isNotEmpty && oldPin != storedPin) {
-        safeSetState(() {
-          _isSettingPin = false;
-          _isPinSet = false;
-        });
-        showTopNotice(
-          context,
-          message: 'Old passcode is not correct.',
-          type: TopNoticeType.caution,
-        );
-        return;
+      if (await PinService.hasPin()) {
+        final verify = await PinService.verifyPin(oldPin);
+        if (!verify.isSuccess) {
+          safeSetState(() {
+            _isSettingPin = false;
+            _isPinSet = false;
+          });
+          showTopNotice(
+            context,
+            message: verify.status == PinVerifyStatus.lockedOut
+                ? 'Too many attempts. Try again in ${verify.lockoutSeconds}s.'
+                : 'Old passcode is not correct.',
+            type: TopNoticeType.caution,
+          );
+          return;
+        }
       }
       if (newPin.length != _pinLength || confirmPin.length != _pinLength) {
         safeSetState(() {
@@ -174,8 +177,7 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
         );
         return;
       }
-      await prefs.setString(_passcodeStorageKey, newPin);
-      await prefs.setInt(_passcodeLengthStorageKey, _pinLength);
+      await PinService.setPin(newPin);
       safeSetState(() => _isPinSet = true);
       await Future.delayed(const Duration(milliseconds: 420));
       if (!mounted) return;
@@ -208,8 +210,7 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
       // just won't come back from the server on a future login yet.
       unawaited(AuthService.updateProfile(displayName: username));
     }
-    await prefs.setString(_passcodeStorageKey, pin);
-    await prefs.setInt(_passcodeLengthStorageKey, _pinLength);
+    await PinService.setPin(pin);
     safeSetState(() => _isPinSet = true);
     await Future.delayed(const Duration(milliseconds: 420));
     if (!mounted) {
