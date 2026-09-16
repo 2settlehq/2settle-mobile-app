@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -215,13 +216,25 @@ ${_status == 'settled' && _settlementDuration.isNotEmpty ? 'Completed in: $_sett
 
   Future<void> _cancelGift() async {
     if (_isCancelling || !_isCreatedGift || _status != 'pending') return;
+    final accessToken = await AuthService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      showTopNotice(
+        context,
+        message: 'Your session has expired. Please sign in again.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
     safeSetState(() => _isCancelling = true);
     try {
       final response = await http.post(
         Uri.parse(
           '$_giftClaimBaseUrl/${Uri.encodeComponent(widget.reference)}/cancel',
         ),
-        headers: const {'accept': 'application/json'},
+        headers: {
+          'accept': 'application/json',
+          'authorization': 'Bearer $accessToken',
+        },
       ).timeout(const Duration(seconds: 12));
       final payload = response.body.isEmpty
           ? <String, dynamic>{}

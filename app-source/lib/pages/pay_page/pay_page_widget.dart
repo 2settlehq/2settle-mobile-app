@@ -9,6 +9,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/form_field_controller.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -477,10 +478,17 @@ class _PayPageWidgetState extends State<PayPageWidget> {
     if (bankCode == null || accountNumber.length != 10) {
       return null;
     }
+    final accessToken = await AuthService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      return null;
+    }
     try {
       final response = await http.post(
         Uri.parse(_validateBankUrl),
-        headers: const {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': 'Bearer $accessToken',
+        },
         body: jsonEncode({
           'bankCode': bankCode,
           'accountNumber': accountNumber,

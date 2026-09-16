@@ -3,6 +3,7 @@ import 'dart:async';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import '/services/pin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -59,6 +60,18 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget>
     if (!mounted) return;
 
     if (hasPasscode) {
+      // A PIN existing on the device doesn't mean the underlying backend
+      // session is still valid — an expired/revoked session should send
+      // the user to Login, not to a PIN screen that just unlocks a dead
+      // token. `null` (network unreachable) is treated as inconclusive so
+      // a flaky connection at cold start doesn't force an unnecessary
+      // re-login; the PIN screen's own unlock flow re-checks this later.
+      final sessionValid = await AuthService.validateSession();
+      if (!mounted) return;
+      if (sessionValid == false) {
+        context.pushNamed(LoginWidget.routeName);
+        return;
+      }
       context.pushNamed(
         ConfirmCodeWidget.routeName,
         queryParameters: {'mode': 'unlock'},

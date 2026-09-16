@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '/config/api_config.dart';
 import '/flutter_flow/nav/nav.dart';
 import 'mobile_identity_service.dart';
-import 'pin_service.dart';
 
 class AuthResult {
   const AuthResult.success() : success = true, error = null;
@@ -250,9 +249,10 @@ class AuthService {
   }
 
   /// Clears everything tied to the signed-in account: tokens, cached
-  /// profile, the local device PIN, and the last-used login identifier.
-  /// A "signed out" device should look like a fresh install, not still
-  /// show the previous user's name/avatar or unlock with their old PIN.
+  /// profile, and the last-used login identifier. Deliberately leaves the
+  /// device PIN in place — it's set once on first login and gates the app
+  /// locally per-device, not per-account, so a plain sign-out shouldn't
+  /// force the user to re-create it on their next login.
   static Future<void> clearSession() async {
     await _secureStorage.delete(key: _accessTokenKey);
     await _secureStorage.delete(key: _refreshTokenKey);
@@ -260,7 +260,6 @@ class AuthService {
     await prefs.remove(_userIdKey);
     await prefs.remove(_usernameKey);
     await prefs.remove(_avatarUrlKey);
-    await PinService.clearPin();
     await MobileIdentityService.clearIdentity();
     AppStateNotifier.instance.setAppSessionActive(false);
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -8,6 +10,8 @@ import 'auth/firebase_auth/auth_util.dart';
 import 'backend/firebase/firebase_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
+import '/services/pin_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,8 +34,27 @@ class MyApp extends StatefulWidget {
       context.findAncestorStateOfType<_MyAppState>()!;
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   ThemeMode _themeMode = FlutterFlowTheme.themeMode;
+
+  // How long the app can sit in the background before the next foreground
+  // resume forces a PIN re-entry. 60s balances real security (a lost or
+  // stolen unlocked phone isn't reachable for long) against not re-prompting
+  // for routine interruptions — a quick camera/share-sheet trip, glancing at
+  // a notification, a phone call.
+  static const _autoLockAfter = Duration(seconds: 60);
+  DateTime? _backgroundedAt;
+
+  // Screens where a PIN prompt either doesn't make sense yet (no session/PIN
+  // to protect) or would stomp on a flow already dealing with the PIN, so
+  // auto-lock skips them rather than pushing another lock screen on top.
+  static final _autoLockExemptRoutes = {
+    '/${SplashScreenWidget.routePath}',
+    '/${OnboardingWidget.routePath}',
+    '/${LoginWidget.routePath}',
+    '/${ConfirmCodeWidget.routePath}',
+    '/${SetAppPasscodeWidget.routePath}',
+  };
 
   late AppStateNotifier _appStateNotifier;
   late GoRouter _router;
@@ -55,6 +78,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
@@ -71,9 +95,32 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     authUserSub.cancel();
 
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _backgroundedAt = DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(_maybeAutoLock());
+    }
+  }
+
+  Future<void> _maybeAutoLock() async {
+    final backgroundedAt = _backgroundedAt;
+    _backgroundedAt = null;
+    if (backgroundedAt == null) return;
+    if (DateTime.now().difference(backgroundedAt) < _autoLockAfter) return;
+    if (!await PinService.hasPin()) return;
+    if (_autoLockExemptRoutes.contains(getRoute())) return;
+    _router.pushNamed(
+      ConfirmCodeWidget.routeName,
+      queryParameters: {'mode': 'unlock'},
+    );
   }
 
   void setThemeMode(ThemeMode mode) => safeSetState(() {
