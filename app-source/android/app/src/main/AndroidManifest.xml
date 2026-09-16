@@ -8,8 +8,7 @@
     <application
         android:label="2Settle"
         tools:replace="android:label"
-        android:icon="@mipmap/ic_launcher"
-        android:requestLegacyExternalStorage="true">
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name=".MainActivity"
