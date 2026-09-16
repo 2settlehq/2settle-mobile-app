@@ -4,6 +4,7 @@ import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import '/services/mobile_identity_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -238,6 +239,16 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
       return;
     }
 
+    final accessToken = await AuthService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      showTopNotice(
+        context,
+        message: 'Your session has expired. Please sign in again.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
     safeSetState(() => _creating = true);
     try {
       final mobileId = await MobileIdentityService.getOrCreateMobileId();
@@ -245,9 +256,10 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
       final response = await http
           .post(
             Uri.parse(_paymentsUrl),
-            headers: const {
+            headers: {
               'accept': 'application/json',
               'content-type': 'application/json',
+              'authorization': 'Bearer $accessToken',
             },
             body: jsonEncode({
               'type': 'gift',
