@@ -2,60 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '/flutter_flow/flutter_flow_util.dart';
-import 'api_manager.dart';
 
 export 'api_manager.dart' show ApiCallResponse;
 
 const _kPrivateApiFunctionName = 'ffPrivateApiCall';
 
-class BankNameCheckCall {
-  static Future<ApiCallResponse> call({
-    String? accNo = '',
-  }) async {
-    return ApiManager.instance.makeApiCall(
-      callName: 'BankName Check',
-      apiUrl:
-          'https://app.nuban.com.ng/possible-banks/NUBAN-OEIOAASY1257?acc_no=0169552625',
-      callType: ApiCallType.GET,
-      headers: {},
-      params: {},
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-
-  static List<String>? bankName(dynamic response) => (getJsonField(
-        response,
-        r'''$[:].name''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
-  static List<String>? bankCode(dynamic response) => (getJsonField(
-        response,
-        r'''$[:].bank_code''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
-  static List<String>? accNo(dynamic response) => (getJsonField(
-        response,
-        r'''$[:].recipientaccount''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
-}
 
 class ApiPagingParams {
   int nextPageNumber = 0;
