@@ -9,6 +9,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/form_field_controller.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -396,13 +397,24 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
       _validationMessage = null;
     });
 
+    final accessToken = await AuthService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      if (!mounted) return;
+      safeSetState(() {
+        _isValidatingAccount = false;
+        _validationMessage = 'Your session has expired. Please sign in again.';
+      });
+      return;
+    }
+
     try {
       final response = await http
           .post(
             Uri.parse(_validateBankUrl),
-            headers: const {
+            headers: {
               'accept': 'application/json',
               'content-type': 'application/json',
+              'authorization': 'Bearer $accessToken',
             },
             body: jsonEncode({
               'accountNumber': accountNumber,

@@ -1,4 +1,5 @@
 import '/components/settle_numeric_keypad.dart';
+import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -26,7 +27,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
   late AnimationController _cursorController;
   late Animation<double> _cursorOpacity;
   static const _blue = Color(0xFF4472C4);
-  static const _rateUrl = 'https://api.2settle.io/v1/rate';
+  static const _rateUrl = ApiConfig.rateUrl;
   static const _cryptoPriceUrl =
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,tron,tether&vs_currencies=usd';
   static const _selectorWidth = 176.0;

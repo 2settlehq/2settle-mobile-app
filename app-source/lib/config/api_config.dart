@@ -23,9 +23,11 @@ class ApiConfig {
     defaultValue: 'https://api.2settle.io',
   );
 
+  static const String rateUrl = '$baseUrl/api/rate';
   static const String banksResolveUrl = '$baseUrl/api/banks/resolve';
   static const String giftsBaseUrl = '$baseUrl/api/gifts';
   static const String paymentsUrl = '$baseUrl/api/payments';
+  static const String paymentsEstimateUrl = '$baseUrl/api/payments/estimate';
 
   static const String authOtpRequestUrl = '$authBaseUrl/v1/users/auth/otp/request';
   static const String authOtpVerifyUrl = '$authBaseUrl/v1/users/auth/otp/verify';

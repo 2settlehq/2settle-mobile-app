@@ -35,15 +35,23 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   late MainTransactionModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  static const _rateUrl = 'https://api.2settle.io/v1/rate';
+  static const _rateUrl = ApiConfig.rateUrl;
   static const _cryptoPriceUrl =
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,tether,tron&vs_currencies=usd';
   static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
+  static const _estimateUrl = ApiConfig.paymentsEstimateUrl;
   static const _fallbackBankCodes = ngBankCodes;
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
   Timer? _rateRefreshTimer;
   double? _liveRate;
+  // Server-computed estimate (cryptoAmount, crypto, network, fiatAmount,
+  // conversionFee, processingFee) for the currently entered amount/crypto/
+  // network. Null until a successful estimate call lands, so the UI falls
+  // back to the client-side approximation below until then.
+  Map<String, String>? _estimate;
+  bool _isEstimating = false;
+  bool _isRefreshingRate = false;
   Map<String, double> _cryptoUsdPrices = {
     'BTC': 65000.0,
     'ETH': 3200.0,
@@ -89,6 +97,19 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     };
   }
 
+  // Machine-readable network code for the estimate/payment APIs, matching
+  // the convention already used by create_gift_widget.dart.
+  String get _selectedNetworkForApi {
+    final network = _selectedCryptoNetwork.toLowerCase();
+    return switch (network) {
+      'bitcoin' => 'bitcoin',
+      'ethereum' => 'ethereum',
+      'binance' => 'bep20',
+      'tron' => 'trc20',
+      _ => network,
+    };
+  }
+
   double get _selectedCryptoUsdPrice =>
       _cryptoUsdPrices[_selectedCrypto] ?? 1.0;
 
@@ -115,8 +136,19 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     return NumberFormat('#,##0.00', 'en_US').format(amount);
   }
 
+  // Prefer the rate returned alongside the payment estimate — it's the same
+  // market rate, already fetched for the currently entered amount/crypto/
+  // network — over the separately polled live rate, so this screen doesn't
+  // show two numbers pulled from two different calls. Falls back to the
+  // polled live rate until the first estimate lands (or if it fails).
+  double? get _displayRate {
+    final estimateRate = double.tryParse(_estimate?['rate'] ?? '');
+    if (estimateRate != null && estimateRate > 0) return estimateRate;
+    return _liveRate;
+  }
+
   String get _formattedLiveRate {
-    final rate = _liveRate;
+    final rate = _displayRate;
     if (rate == null) {
       return '...';
     }
@@ -131,7 +163,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     }
     if ((_selectedInputCurrency == 'USD' ||
             _selectedInputCurrency == 'CRYPTO') &&
-        (_liveRate == null || _liveRate! <= 0)) {
+        (_displayRate == null || _displayRate! <= 0)) {
       return 'Sending ₦**** while live rate loads';
     }
     final suffix = _selectedInputCurrency == 'CRYPTO'
@@ -143,9 +175,23 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   }
 
   String _cryptoAmountText() {
-    final rate = _liveRate;
     final settlementAmount = _enteredAmountInNaira;
-    if (rate == null || rate <= 0 || settlementAmount <= 0) {
+    if (settlementAmount <= 0) {
+      return '0.00000 $_selectedCrypto';
+    }
+
+    // Prefer the server-computed estimate (real fee schedule from
+    // payment-engine) when we have one for the currently entered amount.
+    final estimated = double.tryParse(_estimate?['cryptoAmount'] ?? '');
+    if (estimated != null && estimated > 0) {
+      return '${_roundDownCrypto(estimated)} $_selectedCrypto';
+    }
+
+    // Fallback approximation while the estimate is loading, unavailable,
+    // or the endpoint hasn't been deployed yet — same math this screen
+    // used before the estimate call existed.
+    final rate = _liveRate;
+    if (rate == null || rate <= 0) {
       return '0.00000 $_selectedCrypto';
     }
     const networkFee = 0.0004;
@@ -154,6 +200,95 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     final cryptoAmount =
         (totalNaira / (rate * _selectedCryptoUsdPrice)) + networkFee;
     return '${_roundDownCrypto(cryptoAmount)} $_selectedCrypto';
+  }
+
+  String? get _conversionFeeText {
+    final fee = double.tryParse(_estimate?['conversionFee'] ?? '');
+    if (fee == null) return null;
+    return '₦${_formatFiat(fee)}';
+  }
+
+  String? get _processingFeeText {
+    final fee = _estimate?['processingFee'];
+    if (fee == null || fee.isEmpty) return null;
+    return '$fee $_selectedCrypto';
+  }
+
+  void _queueEstimate() {
+    EasyDebounce.debounce(
+      '_estimate',
+      const Duration(milliseconds: 600),
+      _fetchEstimate,
+    );
+  }
+
+  // Manual refresh from the rate row — cancels any pending debounced
+  // estimate so this runs immediately instead of waiting behind it.
+  Future<void> _refreshRate() async {
+    if (_isRefreshingRate) return;
+    EasyDebounce.cancel('_estimate');
+    safeSetState(() => _isRefreshingRate = true);
+    try {
+      await Future.wait([
+        _loadLiveRate(),
+        _fetchEstimate(),
+      ]);
+    } finally {
+      if (mounted) safeSetState(() => _isRefreshingRate = false);
+    }
+  }
+
+  Future<void> _fetchEstimate() async {
+    final amount = _enteredAmountInNaira;
+    if (amount <= 0) {
+      if (!mounted) return;
+      safeSetState(() {
+        _estimate = null;
+        _isEstimating = false;
+      });
+      return;
+    }
+
+    safeSetState(() => _isEstimating = true);
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_estimateUrl),
+            headers: const {
+              'accept': 'application/json',
+              'content-type': 'application/json',
+            },
+            body: jsonEncode({
+              'fiatAmount': amount,
+              'fiatCurrency': 'NGN',
+              'crypto': _selectedCrypto,
+              'network': _selectedNetworkForApi,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+      final payload = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      final ok = response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          payload['ok'] != false;
+      final estimate = payload['estimate'];
+      if (!mounted) return;
+      safeSetState(() {
+        _estimate = ok && estimate is Map
+            ? estimate.map((key, value) => MapEntry('$key', '$value'))
+            : null;
+        _isEstimating = false;
+      });
+    } catch (_) {
+      // Endpoint unavailable/unreachable — the client-side approximation
+      // in _cryptoAmountText keeps the screen usable either way.
+      if (!mounted) return;
+      safeSetState(() {
+        _estimate = null;
+        _isEstimating = false;
+      });
+    }
   }
 
   String _roundDownCrypto(double value) =>
@@ -376,10 +511,12 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       onChanged: (value) {
         _model.amountTextController?.text = value;
         safeSetState(() {});
+        _queueEstimate();
       },
       onDone: (value) {
         _model.amountTextController?.text = value;
         safeSetState(() {});
+        _queueEstimate();
       },
     );
   }
@@ -825,8 +962,11 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                     options: List<String>.from(
                                         ['USD', 'NGN', 'CRYPTO']),
                                     optionLabels: ['USD', 'NGN', 'CRYPTO'],
-                                    onChanged: (val) => safeSetState(
-                                        () => _model.budgetValue = val),
+                                    onChanged: (val) {
+                                      safeSetState(
+                                          () => _model.budgetValue = val);
+                                      _queueEstimate();
+                                    },
                                     width: MediaQuery.sizeOf(context).width *
                                         0.262,
                                     height: 46.0,
@@ -978,30 +1118,106 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                   0.0, 5.0, 0.0, 20.0),
                               child: Align(
                                 alignment: AlignmentDirectional.center,
-                                child: Text(
-                                  _quoteText,
-                                  textAlign: TextAlign.center,
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        font: TextStyle(
-                                          fontWeight: FontWeight.normal,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontStyle,
+                                child: InkWell(
+                                  onTap: _refreshRate,
+                                  borderRadius: BorderRadius.circular(6.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          _quoteText,
+                                          textAlign: TextAlign.center,
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .override(
+                                                font: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.normal,
+                                                  fontStyle:
+                                                      FlutterFlowTheme.of(
+                                                              context)
+                                                          .bodyMedium
+                                                          .fontStyle,
+                                                ),
+                                                color: Color(0xFF4472C4),
+                                                fontSize: 11.0,
+                                                letterSpacing: 0.0,
+                                                fontWeight: FontWeight.normal,
+                                                fontStyle:
+                                                    FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodyMedium
+                                                        .fontStyle,
+                                              ),
                                         ),
-                                        color: Color(0xFF4472C4),
-                                        fontSize: 11.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
                                       ),
+                                      Padding(
+                                        padding: EdgeInsetsDirectional.only(
+                                            start: 4.0),
+                                        child: _isRefreshingRate
+                                            ? SizedBox(
+                                                width: 11.0,
+                                                height: 11.0,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 1.5,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation(
+                                                          Color(0xFF4472C4)),
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.refresh_rounded,
+                                                color: Color(0xFF4472C4),
+                                                size: 13.0,
+                                              ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
+                            if (_isEstimating)
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                    bottom: 10.0),
+                                child: Align(
+                                  alignment: AlignmentDirectional.center,
+                                  child: Text(
+                                    'Getting fee estimate...',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFF6D7884),
+                                      fontSize: 10.4,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (_conversionFeeText != null ||
+                                _processingFeeText != null)
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                    bottom: 10.0),
+                                child: Align(
+                                  alignment: AlignmentDirectional.center,
+                                  child: Text(
+                                    [
+                                      if (_conversionFeeText != null)
+                                        'Conversion fee: $_conversionFeeText',
+                                      if (_processingFeeText != null)
+                                        'Processing fee: $_processingFeeText',
+                                    ].join('  •  '),
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFF6D7884),
+                                      fontSize: 10.4,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -1111,8 +1327,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                               'TRX',
                                               'ETH'
                                             ],
-                                            onChanged: (val) => safeSetState(
-                                              () {
+                                            onChanged: (val) {
+                                              safeSetState(() {
                                                 _model.cryptoValue = val;
                                                 if (val == 'USDT') {
                                                   _model.cryptoNetworkValue ??=
@@ -1132,8 +1348,9 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                                       .cryptoNetworkValueController
                                                       ?.value = null;
                                                 }
-                                              },
-                                            ),
+                                              });
+                                              _queueEstimate();
+                                            },
                                             width: MediaQuery.sizeOf(context)
                                                     .width *
                                                 1.0,
@@ -1201,10 +1418,12 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                                   'ERC20',
                                                   'BEP20',
                                                 ],
-                                                onChanged: (val) =>
-                                                    safeSetState(() => _model
-                                                            .cryptoNetworkValue =
-                                                        val),
+                                                onChanged: (val) {
+                                                  safeSetState(() => _model
+                                                          .cryptoNetworkValue =
+                                                      val);
+                                                  _queueEstimate();
+                                                },
                                                 width:
                                                     MediaQuery.sizeOf(context)
                                                             .width *
