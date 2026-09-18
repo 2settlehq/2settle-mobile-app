@@ -32,7 +32,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   static const _blue = Color(0xFF4472C4);
-  static const _rateUrl = 'https://api.2settle.io/v1/rate';
+  static const _rateUrl = ApiConfig.rateUrl;
   static const _transactionStorageKey = '2settle_initiated_transactions';
   static const _receiveStorageKey = '2settle_receive_requests';
   static const _giftHistoryStorageKey = '2settle_gift_history';

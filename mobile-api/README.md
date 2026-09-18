@@ -41,6 +41,47 @@ Response:
 }
 ```
 
+`POST /api/payments/estimate`
+
+Sessionless — no bearer token required. Signs and forwards the upstream
+`POST /v1/payments/estimate` request (payment-engine's real endpoint —
+see `payment-engine/backend/src/routes/payment.routes.ts`). Locks a rate
+and calculates fees without creating a session, wallet, or any DB record.
+
+Request:
+
+```json
+{
+  "fiatAmount": 5000,
+  "fiatCurrency": "NGN",
+  "crypto": "USDT",
+  "network": "trc20",
+  "chargeFrom": "crypto"
+}
+```
+
+`fiatCurrency` defaults to `NGN` and `chargeFrom` defaults to `crypto` if omitted.
+
+Response:
+
+```json
+{
+  "ok": true,
+  "estimate": {
+    "cryptoAmount": 3.21,
+    "crypto": "USDT",
+    "network": "trc20",
+    "fiatAmount": 5000,
+    "fiatCurrency": "NGN",
+    "rate": 1600,
+    "conversionFee": 0,
+    "processingFee": 500,
+    "chargeFrom": "crypto",
+    "expiresAt": "2026-09-17T06:30:00.000Z"
+  }
+}
+```
+
 `POST /api/gifts/:reference/claim/confirm`
 
 Request:

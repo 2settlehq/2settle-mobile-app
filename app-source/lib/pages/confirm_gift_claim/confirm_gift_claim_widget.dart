@@ -6,6 +6,7 @@ import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -208,6 +209,16 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
   }
 
   Future<void> _claimGift() async {
+    final accessToken = await AuthService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      showTopNotice(
+        context,
+        message: 'Your session has expired. Please sign in again.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
     safeSetState(() {
       _isClaiming = true;
       _status = 'claiming';
@@ -219,9 +230,10 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
             Uri.parse(
               '$_giftClaimBaseUrl/${Uri.encodeComponent(widget.reference)}/claim/confirm',
             ),
-            headers: const {
+            headers: {
               'accept': 'application/json',
               'content-type': 'application/json',
+              'authorization': 'Bearer $accessToken',
             },
             body: jsonEncode({
               'receiver': {
