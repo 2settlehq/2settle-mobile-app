@@ -754,6 +754,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     });
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
+    final bankName = _model.bankNameValue;
+    final bankCode = bankName == null ? null : _bankCodes[bankName];
     await context.pushNamed(
       ConfirmTransactionWidget.routeName,
       queryParameters: {
@@ -761,10 +763,12 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
         'rate': _formattedLiveRate,
         'beneficiaryName': _validatedAccountName ?? 'Beneficiary',
         'bankName': _validatedBankName ?? _model.bankNameValue ?? 'Bank',
+        'bankCode': bankCode ?? '',
         'accountNumber': _model.accNoTextController?.text ?? '',
         'cryptoAmount': _cryptoAmountText(),
         'crypto': _selectedCrypto,
         'network': _selectedCryptoNetwork,
+        'networkCode': _selectedNetworkForApi,
       }.withoutNulls,
     );
     if (!mounted) return;
