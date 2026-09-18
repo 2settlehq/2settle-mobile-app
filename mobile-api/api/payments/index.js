@@ -12,7 +12,7 @@ const UPSTREAM_URL = "https://api.2settle.io/v1/payments";
 const DEFAULT_UPSTREAM_PATH = "/v1/payments";
 
 function normalizePayload(body, endUser) {
-  return {
+  const payload = {
     type: body?.type || "gift",
     fiatAmount: Number(body?.fiatAmount),
     chargeFrom: body?.chargeFrom || "fiat",
@@ -26,6 +26,17 @@ function normalizePayload(body, endUser) {
       phone: endUser.phone,
     },
   };
+
+  // Receiver bank details — required for type 'transfer' (payment-engine
+  // resolves accountName/bankName server-side via NUBAN; we only ever
+  // forward what the client can legitimately supply).
+  const bankCode = pickString(body?.receiver, ["bankCode"]);
+  const accountNumber = pickString(body?.receiver, ["accountNumber"]);
+  if (bankCode && accountNumber) {
+    payload.receiver = { bankCode, accountNumber };
+  }
+
+  return payload;
 }
 
 function proxyDiagnostics(path) {
@@ -82,6 +93,12 @@ export default async function handler(req, res) {
     return json(res, 400, {
       ok: false,
       error: "Valid fiatAmount is required.",
+    });
+  }
+  if (payload.type === "transfer" && !payload.receiver) {
+    return json(res, 400, {
+      ok: false,
+      error: "Receiver bank details are required for transfers.",
     });
   }
 

@@ -1,9 +1,13 @@
 import '/components/status_action_button.dart';
+import '/components/top_notice.dart';
+import '/config/api_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'confirm_transaction_model.dart';
 export 'confirm_transaction_model.dart';
@@ -15,10 +19,12 @@ class ConfirmTransactionWidget extends StatefulWidget {
     this.rate = '...',
     this.beneficiaryName = 'Beneficiary',
     this.bankName = 'Bank',
+    this.bankCode = '',
     this.accountNumber = '',
     this.cryptoAmount = '0.00000 USDT',
     this.crypto = 'USDT',
     this.network = 'TRC20',
+    this.networkCode = 'trc20',
   });
 
   static String routeName = 'confirm_transaction';
@@ -28,10 +34,12 @@ class ConfirmTransactionWidget extends StatefulWidget {
   final String rate;
   final String beneficiaryName;
   final String bankName;
+  final String bankCode;
   final String accountNumber;
   final String cryptoAmount;
   final String crypto;
   final String network;
+  final String networkCode;
 
   @override
   State<ConfirmTransactionWidget> createState() =>
@@ -44,6 +52,8 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   static const _blue = Color(0xFF4472C4);
   static const _transactionStorageKey = '2settle_initiated_transactions';
+  static const _paymentsUrl = ApiConfig.paymentsUrl;
+  bool _isConfirming = false;
 
   String get _settlementText => '₦${widget.settlementAmount}';
   String get _cryptoOnlyAmount {
@@ -277,13 +287,16 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
     );
   }
 
-  Future<void> _saveInitiatedTransaction() async {
-    final settlement = double.tryParse(
-          widget.settlementAmount.replaceAll(',', '').replaceAll('₦', ''),
-        ) ??
-        0;
+  Future<void> _saveInitiatedTransaction({
+    required String settlementAmount,
+    required String cryptoAmount,
+    required String reference,
+    required String status,
+  }) async {
+    final settlement =
+        double.tryParse(settlementAmount.replaceAll(',', '').replaceAll('₦', '')) ?? 0;
     final cryptoValue =
-        double.tryParse(widget.cryptoAmount.split(' ').first.trim()) ?? 0;
+        double.tryParse(cryptoAmount.split(' ').first.trim()) ?? 0;
     if (settlement <= 0 && cryptoValue <= 0) {
       return;
     }
@@ -304,17 +317,17 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
 
     final now = DateTime.now();
     transactions.insert(0, {
-      'id': '2ST-${now.microsecondsSinceEpoch}',
+      'id': reference.isNotEmpty ? reference : '2ST-${now.microsecondsSinceEpoch}',
       'createdAt': now.toIso8601String(),
-      'settlementAmount': widget.settlementAmount,
-      'cryptoAmount': _cryptoOnlyAmount,
+      'settlementAmount': settlementAmount,
+      'cryptoAmount': cryptoAmount,
       'crypto': widget.crypto,
       'network': widget.network,
       'beneficiaryName': widget.beneficiaryName,
       'bankName': widget.bankName,
       'accountNumber': widget.accountNumber,
       'rate': widget.rate,
-      'status': 'funding',
+      'status': status,
     });
 
     await prefs.setString(
@@ -323,22 +336,145 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
     );
   }
 
+  Map<String, dynamic> _paymentFromResponse(Map<String, dynamic> payload) {
+    final payment = payload['payment'];
+    if (payment is Map) return Map<String, dynamic>.from(payment);
+    final data = payload['data'];
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return payload;
+  }
+
+  String _formatCryptoAmount(dynamic value, String crypto) {
+    final parsed = value is num
+        ? value.toDouble()
+        : double.tryParse('${value ?? ''}'.replaceAll(',', '').trim());
+    if (parsed == null) return widget.cryptoAmount;
+    final roundedDown = (parsed * 100000).floor() / 100000;
+    return '${roundedDown.toStringAsFixed(5)} $crypto';
+  }
+
+  // Creates the real payment session with payment-engine (via mobile-api) so
+  // the crypto amount, naira amount, and deposit wallet shown on the next
+  // screen come from the session it opens, not from this screen's own
+  // client-side estimate.
   Future<void> _confirmTransaction() async {
-    await _saveInitiatedTransaction();
-    if (!mounted) return;
-    context.pushNamed(
-      ReceiveFundingWidget.routeName,
-      queryParameters: {
-        'settlementAmount': widget.settlementAmount,
-        'cryptoAmount': _cryptoOnlyAmount,
-        'crypto': widget.crypto,
-        'network': widget.network,
-        'beneficiaryName': widget.beneficiaryName,
-        'bankName': widget.bankName,
-        'accountNumber': widget.accountNumber,
-        'rate': widget.rate,
-      },
-    );
+    if (_isConfirming) return;
+
+    final fiatAmount = double.tryParse(
+          widget.settlementAmount.replaceAll(',', '').replaceAll('₦', '').trim(),
+        ) ??
+        0;
+    if (fiatAmount <= 0) {
+      showTopNotice(context,
+          message: 'Enter a valid amount.', type: TopNoticeType.caution);
+      return;
+    }
+    if (widget.bankCode.isEmpty || widget.accountNumber.isEmpty) {
+      showTopNotice(
+        context,
+        message: 'Select a valid beneficiary account.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
+    final accessToken = await AuthService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      if (!mounted) return;
+      showTopNotice(
+        context,
+        message: 'Your session has expired. Please sign in again.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+
+    safeSetState(() => _isConfirming = true);
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_paymentsUrl),
+            headers: {
+              'accept': 'application/json',
+              'content-type': 'application/json',
+              'authorization': 'Bearer $accessToken',
+            },
+            body: jsonEncode({
+              'type': 'transfer',
+              'fiatAmount': fiatAmount,
+              'fiatCurrency': 'NGN',
+              'crypto': widget.crypto,
+              'network': widget.networkCode,
+              'chargeFrom': 'crypto',
+              'receiver': {
+                'bankCode': widget.bankCode,
+                'accountNumber': widget.accountNumber,
+              },
+            }),
+          )
+          .timeout(const Duration(seconds: 14));
+      final decoded = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      final ok = response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          decoded['ok'] != false &&
+          decoded['success'] != false;
+      if (!ok) {
+        final message = decoded['message'] ??
+            decoded['error'] ??
+            'Unable to create payment.';
+        throw Exception(message);
+      }
+
+      final payment = _paymentFromResponse(decoded);
+      final crypto = '${payment['crypto'] ?? widget.crypto}'.toUpperCase();
+      final settlementAmount = '${payment['fiatAmount'] ?? fiatAmount}';
+      final cryptoAmount = _formatCryptoAmount(payment['cryptoAmount'], crypto);
+      final depositAddress = '${payment['depositAddress'] ?? ''}';
+      final reference = '${payment['reference'] ?? ''}';
+      final charge = payment['charge'];
+
+      await _saveInitiatedTransaction(
+        settlementAmount: settlementAmount,
+        cryptoAmount: cryptoAmount,
+        reference: reference,
+        status: 'funding',
+      );
+      if (!mounted) return;
+      await context.pushNamed(
+        ReceiveFundingWidget.routeName,
+        queryParameters: {
+          'settlementAmount': settlementAmount,
+          'cryptoAmount': cryptoAmount,
+          'crypto': crypto,
+          'network': widget.network,
+          'beneficiaryName': widget.beneficiaryName,
+          'bankName': widget.bankName,
+          'accountNumber': widget.accountNumber,
+          'rate': '${payment['rate'] ?? widget.rate}',
+          'paymentId': '${payment['id'] ?? ''}',
+          'reference': reference,
+          'depositAddress': depositAddress,
+          'paymentStatus': '${payment['status'] ?? 'pending'}',
+          'expiresAt': '${payment['expiresAt'] ?? ''}',
+          'chargeFiat':
+              '${charge is Map ? charge['fiat'] ?? '' : ''}',
+          'chargeCrypto':
+              '${charge is Map ? charge['crypto'] ?? '' : ''}',
+          'transactionUsd': '${payment['transactionUsd'] ?? ''}',
+        }.withoutNulls,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showTopNotice(
+        context,
+        message: error.toString().replaceFirst('Exception: ', ''),
+        type: TopNoticeType.caution,
+      );
+    } finally {
+      if (mounted) safeSetState(() => _isConfirming = false);
+    }
   }
 
   @override
@@ -562,7 +698,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
                     const SizedBox(height: 14.0),
                     StatusActionButton(
                       text: 'Confirm',
-                      isLoading: false,
+                      isLoading: _isConfirming,
                       isDone: false,
                       onPressed: _confirmTransaction,
                       idleIcon: Icons.check_rounded,
