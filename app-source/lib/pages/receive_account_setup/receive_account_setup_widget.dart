@@ -41,7 +41,7 @@ class _ReceiveAccountSetupScaffoldState
   static const _green = Color(0xFF25A55F);
   static const _red = Color(0xFFC30000);
   static const _storageKey = ReceivePaymentDetailsWidget.storageKey;
-  static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
+  static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
 
   final _labelController = TextEditingController();

@@ -11,6 +11,14 @@ export function cleanEnv(value) {
     .replace(/^['"]|['"]$/g, "");
 }
 
+// Signing diagnostics (upstream URL, signature scheme/encoding/prefix) are
+// useful while wiring up a new environment but hand an attacker the exact
+// HMAC scheme to target for free — including pre-auth, on the public gift
+// lookup route. Off by default; opt in per-environment for debugging only.
+export function includeDiagnostics() {
+  return cleanEnv(process.env.TWOSETTLE_DEBUG_DIAGNOSTICS) === "true";
+}
+
 export function hmac(secretKey, payload, encoding = "hex") {
   return crypto.createHmac("sha256", secretKey).update(payload).digest(encoding);
 }

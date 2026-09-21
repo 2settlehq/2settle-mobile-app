@@ -6,6 +6,7 @@ import {
   pickString,
   normalizeReference,
   fetchWithTimeout,
+  includeDiagnostics,
 } from "../../../../lib/signing.js";
 import { verifyEndUser, callerOwnsReference } from "../../../../lib/endUser.js";
 
@@ -109,8 +110,7 @@ export default async function handler(req, res) {
         error:
           pickString(data, ["error", "message"]) ||
           "Gift could not be cancelled.",
-        diagnostics: proxyDiagnostics(path),
-        upstream: data,
+        ...(includeDiagnostics() ? { diagnostics: proxyDiagnostics(path) } : {}),
       });
     }
 

@@ -63,7 +63,7 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
 
   static const _blue = Color(0xFF4472C4);
   static const _storageKey = '2settle_saved_beneficiaries';
-  static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
+  static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _fallbackBankCodes = ngBankCodes;
 
