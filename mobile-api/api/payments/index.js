@@ -5,6 +5,7 @@ import {
   signRequest,
   pickString,
   fetchWithTimeout,
+  includeDiagnostics,
 } from "../../lib/signing.js";
 import { verifyEndUser } from "../../lib/endUser.js";
 
@@ -135,23 +136,44 @@ export default async function handler(req, res) {
         error:
           pickString(data, ["error", "message"]) ||
           "Payment could not be created.",
-        request: payload,
-        diagnostics: proxyDiagnostics(path),
-        upstream: data,
+        ...(includeDiagnostics() ? { diagnostics: proxyDiagnostics(path) } : {}),
       });
     }
 
+    // Explicit allowlist — never forward the raw upstream object (it can
+    // carry internal/financial fields) or echo the request payload (it
+    // carries payer identity). Fields here match exactly what the app's
+    // create-gift flow reads from the response (see
+    // create_gift_widget.dart's _paymentFromResponse/_continueToFunding).
+    const created = data.data || data.payment || data.result || data;
+    const charge = created.charge && typeof created.charge === "object"
+      ? { fiat: created.charge.fiat, crypto: created.charge.crypto }
+      : undefined;
     return json(res, 200, {
       ok: true,
-      request: payload,
-      payment: data.data || data.payment || data.result || data,
-      raw: data,
+      payment: {
+        id: created.id,
+        reference: created.reference,
+        type: created.type,
+        status: created.status,
+        depositAddress: created.depositAddress,
+        cryptoAmount: created.cryptoAmount,
+        crypto: created.crypto,
+        network: created.network,
+        fiatAmount: created.fiatAmount,
+        fiatCurrency: created.fiatCurrency,
+        rate: created.rate,
+        charge,
+        transactionUsd: created.transactionUsd,
+        expiresAt: created.expiresAt,
+        confirmedAt: created.confirmedAt,
+        settledAt: created.settledAt,
+      },
     });
   } catch {
     return json(res, 500, {
       ok: false,
       error: "Payment creation failed.",
-      request: payload,
     });
   }
 }

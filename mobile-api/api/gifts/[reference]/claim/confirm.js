@@ -7,11 +7,53 @@ import {
   normalizeReference,
   normalizeDigits,
   fetchWithTimeout,
+  includeDiagnostics,
 } from "../../../../lib/signing.js";
 import { verifyEndUser } from "../../../../lib/endUser.js";
 
 const UPSTREAM_BASE_URL = "https://api.2settle.io/v1/payments/gifts";
 const DEFAULT_UPSTREAM_BASE_PATH = "/v1/payments/gifts";
+
+// Same status-lookup endpoint GET /api/gifts/:reference uses, and the same
+// `valid` flag the app's own claim UI already treats as the source of
+// truth for whether a gift is currently claimable. Gifts are bearer-style
+// claim codes (creation never records an intended recipient), so there is
+// no caller-identity "ownership" to check the way cancellation checks
+// sender ownership — this is the real equivalent: confirm the reference is
+// still live before submitting bank details, rather than only finding out
+// from the claim endpoint after the fact.
+const STATUS_LOOKUP_UPSTREAM_URL = "https://api.2settle.io/v1/payments";
+const STATUS_LOOKUP_PATH = "/v1/payments";
+
+async function fetchGiftValidity(reference, apiKey, secretKey) {
+  const encodedReference = encodeURIComponent(reference);
+  const path = `${STATUS_LOOKUP_PATH}/${encodedReference}`;
+  const timestamp = buildTimestamp();
+  const body = "{}";
+  const signature = signRequest({ secretKey, method: "GET", path, timestamp, body });
+
+  try {
+    const upstream = await fetchWithTimeout(
+      `${STATUS_LOOKUP_UPSTREAM_URL}/${encodedReference}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          "x-api-key": apiKey,
+          "x-timestamp": timestamp,
+          "x-signature": signature,
+        },
+      }
+    );
+    if (!upstream.ok) return { checked: false };
+    const data = await upstream.json().catch(() => ({}));
+    return { checked: true, valid: data.valid !== false };
+  } catch {
+    // Lookup itself failing shouldn't block a legitimate claim attempt —
+    // let the real claim/confirm call be the source of truth in that case.
+    return { checked: false };
+  }
+}
 
 function proxyDiagnostics(path) {
   return {
@@ -180,6 +222,15 @@ export default async function handler(req, res) {
     });
   }
 
+  const validity = await fetchGiftValidity(reference, apiKey, secretKey);
+  if (validity.checked && !validity.valid) {
+    return json(res, 409, {
+      ok: false,
+      reference,
+      error: "This gift is no longer available to claim.",
+    });
+  }
+
   try {
     const result = await confirmClaimWithUpstream({
       apiKey,
@@ -199,7 +250,7 @@ export default async function handler(req, res) {
         ok: false,
         reference,
         error: pickString(data, ["error", "message"]) || "Gift claim could not be confirmed.",
-        diagnostics: proxyDiagnostics(path),
+        ...(includeDiagnostics() ? { diagnostics: proxyDiagnostics(path) } : {}),
       });
     }
 

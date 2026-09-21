@@ -8,6 +8,7 @@ import {
   findDeepValue,
   normalizeReference,
   fetchWithTimeout,
+  includeDiagnostics,
 } from "../../lib/signing.js";
 
 const UPSTREAM_BASE_URL = "https://api.2settle.io/v1/payments";
@@ -86,7 +87,7 @@ export default async function handler(req, res) {
         valid: false,
         reference,
         error: pickString(data, ["error", "message"]) || "Gift ID could not be verified.",
-        diagnostics: proxyDiagnostics(path),
+        ...(includeDiagnostics() ? { diagnostics: proxyDiagnostics(path) } : {}),
       });
     }
 

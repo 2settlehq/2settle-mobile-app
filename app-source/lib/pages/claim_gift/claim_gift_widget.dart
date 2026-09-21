@@ -31,7 +31,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
   static const _green = Color(0xFF17A34A);
   static const _red = Color(0xFFC30000);
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
-  static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
+  static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _giftClaimBaseUrl = ApiConfig.giftsBaseUrl;
 

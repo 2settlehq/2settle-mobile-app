@@ -6,6 +6,7 @@ import {
   pickString,
   normalizeReference,
   fetchWithTimeout,
+  includeDiagnostics,
 } from "../../lib/signing.js";
 import { verifyEndUser, callerOwnsReference } from "../../lib/endUser.js";
 
@@ -106,7 +107,7 @@ export default async function handler(req, res) {
         ok: false,
         reference,
         error: pickString(data, ["error", "message"]) || "Payment could not be found.",
-        diagnostics: proxyDiagnostics(path),
+        ...(includeDiagnostics() ? { diagnostics: proxyDiagnostics(path) } : {}),
       });
     }
 

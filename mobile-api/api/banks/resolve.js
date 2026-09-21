@@ -6,6 +6,7 @@ import {
   pickString,
   pickDeepString,
   fetchWithTimeout,
+  includeDiagnostics,
 } from "../../lib/signing.js";
 import { verifyEndUser } from "../../lib/endUser.js";
 
@@ -158,7 +159,7 @@ export default async function handler(req, res) {
         error:
           pickString(data, ["error", "message"]) ||
           "Unable to resolve bank account.",
-        diagnostics: resolverDiagnostics(),
+        ...(includeDiagnostics() ? { diagnostics: resolverDiagnostics() } : {}),
       });
     }
 

@@ -38,7 +38,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   static const _rateUrl = ApiConfig.rateUrl;
   static const _cryptoPriceUrl =
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,tether,tron&vs_currencies=usd';
-  static const _banksUrl = 'https://2settle.io/api/banks?country=NG&limit=50';
+  static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _estimateUrl = ApiConfig.paymentsEstimateUrl;
   static const _fallbackBankCodes = ngBankCodes;

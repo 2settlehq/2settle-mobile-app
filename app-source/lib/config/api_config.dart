@@ -24,6 +24,14 @@ class ApiConfig {
   );
 
   static const String rateUrl = '$baseUrl/api/rate';
+  // Public bank-code list. Not yet proxied through the mobile-api gateway
+  // (unlike rateUrl/banksResolveUrl) — this is a different upstream host
+  // (bare 2settle.io, not api.2settle.io) that hasn't been confirmed as a
+  // payment-engine route, so this only centralizes the literal URL rather
+  // than routing it through mobile-api. Proxying it is a reasonable
+  // follow-up once someone who owns that endpoint confirms its contract.
+  static const String banksListUrl =
+      'https://2settle.io/api/banks?country=NG&limit=50';
   static const String banksResolveUrl = '$baseUrl/api/banks/resolve';
   static const String giftsBaseUrl = '$baseUrl/api/gifts';
   static const String paymentsUrl = '$baseUrl/api/payments';
