@@ -991,11 +991,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                     ),
                                     options: List<String>.from(
                                         ['USD', 'NGN', 'CRYPTO']),
-                                    optionLabels: [
-                                      'USD',
-                                      'NGN',
-                                      _selectedCrypto
-                                    ],
+                                    optionLabels: ['USD', 'NGN', 'CRYPTO'],
                                     onChanged: (val) {
                                       safeSetState(
                                           () => _model.budgetValue = val);
