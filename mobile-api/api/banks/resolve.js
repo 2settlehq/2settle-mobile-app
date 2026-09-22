@@ -8,7 +8,6 @@ import {
   fetchWithTimeout,
   includeDiagnostics,
 } from "../../lib/signing.js";
-import { verifyEndUser } from "../../lib/endUser.js";
 
 const UPSTREAM_URL = "https://api.2settle.io/v1/banks/resolve";
 const DEFAULT_UPSTREAM_PATH = "/v1/banks/resolve";
@@ -53,7 +52,7 @@ function resolverDiagnostics() {
   };
 }
 
-async function resolveWithUpstream({ apiKey, secretKey, authHeader, bankCode, accountNumber }) {
+async function resolveWithUpstream({ apiKey, secretKey, bankCode, accountNumber }) {
   const path = cleanEnv(process.env.TWOSETTLE_SIGNATURE_PATH) || DEFAULT_UPSTREAM_PATH;
   let lastResponse = null;
 
@@ -76,7 +75,6 @@ async function resolveWithUpstream({ apiKey, secretKey, authHeader, bankCode, ac
         "x-api-key": apiKey,
         "x-timestamp": timestamp,
         "x-signature": signature,
-        authorization: authHeader,
       },
       body,
     });
@@ -96,16 +94,6 @@ async function resolveWithUpstream({ apiKey, secretKey, authHeader, bankCode, ac
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return json(res, 405, { ok: false, error: "Method not allowed" });
-  }
-
-  const authHeader = req.headers?.authorization || req.headers?.Authorization;
-  if (!authHeader) {
-    return json(res, 401, { ok: false, error: "Authentication required." });
-  }
-
-  const endUser = await verifyEndUser(authHeader);
-  if (!endUser) {
-    return json(res, 401, { ok: false, error: "Invalid or expired session." });
   }
 
   const apiKey = cleanEnv(process.env.TWOSETTLE_API_KEY);
@@ -145,7 +133,6 @@ export default async function handler(req, res) {
     const resolved = await resolveWithUpstream({
       apiKey,
       secretKey,
-      authHeader,
       bankCode,
       accountNumber,
     });

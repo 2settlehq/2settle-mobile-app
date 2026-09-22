@@ -87,10 +87,13 @@ class PaymentPhoneService {
   }
 
   static String normalizePhone(String input) {
-    final phone = input.trim().replaceAll(RegExp(r'[\s()\-]'), '');
+    var phone = input.trim().replaceAll(RegExp(r'[\s()\-]'), '');
+    if (RegExp(r'^0[789]\d{9}$').hasMatch(phone)) {
+      phone = '+234${phone.substring(1)}';
+    }
     if (!RegExp(r'^\+?[1-9]\d{6,14}$').hasMatch(phone)) {
       throw const PaymentPhoneException(
-          'Enter your phone number with its country code, e.g. +2348012345678.');
+          'Enter an 11-digit Nigerian phone number, e.g. 08012345678, or a number with its country code.');
     }
     return phone.startsWith('+') ? phone : '+$phone';
   }

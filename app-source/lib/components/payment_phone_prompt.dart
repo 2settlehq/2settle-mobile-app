@@ -142,8 +142,9 @@ class _PaymentPhonePromptState extends State<PaymentPhonePrompt> {
                     textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(
                         labelText: 'Phone number',
-                        hintText: '+2348012345678',
-                        helperText: 'Include your country code'),
+                        hintText: '08012345678',
+                        helperText:
+                            'Nigerian number or international format (+234…)'),
                     onSubmitted: (_) => _send(),
                   ),
                   if (hasCode) ...[

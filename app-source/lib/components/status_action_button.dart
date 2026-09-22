@@ -21,11 +21,13 @@ class StatusActionButton extends StatelessWidget {
     this.iconSize = 22.0,
     this.fontSize = 16.0,
     this.gap = 14.0,
+    this.enabled = true,
     this.shadowBlur = 12.0,
     this.shadowOffset = const Offset(4.0, 4.0),
   });
 
   final String text;
+  final bool enabled;
   final bool isLoading;
   final bool isDone;
   final VoidCallback onPressed;
@@ -52,7 +54,7 @@ class StatusActionButton extends StatelessWidget {
     final resolvedIconColor = iconColor ?? color;
 
     return InkWell(
-      onTap: isLoading ? null : onPressed,
+      onTap: isLoading || !enabled ? null : onPressed,
       borderRadius: BorderRadius.circular(28.0),
       child: Container(
         width: width,
