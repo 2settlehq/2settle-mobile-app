@@ -1,4 +1,5 @@
 import '/components/status_action_button.dart';
+import '/components/payment_phone_prompt.dart';
 import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
@@ -236,6 +237,8 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
 
     safeSetState(() => _creating = true);
     try {
+      final phone = await ensurePaymentPhone(context);
+      if (!mounted || phone == null) return;
       final accessToken = await AuthService.getAccessToken();
       if (!mounted) return;
       if (accessToken == null || accessToken.isEmpty) {
@@ -247,7 +250,6 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
         return;
       }
       final mobileId = await MobileIdentityService.getOrCreateMobileId();
-      final phone = await MobileIdentityService.getPhone();
       final response = await http
           .post(
             Uri.parse(_paymentsUrl),
