@@ -37,6 +37,16 @@ function normalizePayload(body, endUser) {
     payload.receiver = { bankCode, accountNumber };
   }
 
+  if (payload.type === "request") {
+    // The caller receives the request; the payer is supplied at fulfillment.
+    delete payload.payer;
+    delete payload.crypto;
+    delete payload.network;
+    delete payload.chargeFrom;
+    if (payload.receiver) payload.receiver.phone = endUser.phone;
+    const description = pickString(body?.metadata, ["description"]);
+    if (description) payload.metadata = { description };
+  }
   return payload;
 }
 
@@ -96,10 +106,10 @@ export default async function handler(req, res) {
       error: "Valid fiatAmount is required.",
     });
   }
-  if (payload.type === "transfer" && !payload.receiver) {
+  if (["transfer", "request"].includes(payload.type) && !payload.receiver) {
     return json(res, 400, {
       ok: false,
-      error: "Receiver bank details are required for transfers.",
+      error: "Receiver bank details are required for transfers and requests.",
     });
   }
 
@@ -130,8 +140,8 @@ export default async function handler(req, res) {
     });
     const data = await upstream.json().catch(() => ({}));
 
-    if (!upstream.ok) {
-      return json(res, upstream.status, {
+    if (!upstream.ok || data.success === false || data.ok === false) {
+      return json(res, upstream.ok ? 502 : upstream.status, {
         ok: false,
         error:
           pickString(data, ["error", "message"]) ||

@@ -1,3 +1,4 @@
+import '/services/payment_request_service.dart';
 import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -165,16 +166,28 @@ class _ReceiveRequestDetailsWidgetState
 
   String get _link {
     final id = _request?.id ?? widget.requestId;
-    return 'https://receive.2settle.io/pay/$id';
+    return paymentRequestLink(id);
   }
 
   Future<void> _copyLink() async {
+    if (_link.isEmpty) {
+      showTopNotice(context,
+          message:
+              'This old request has no payment link. Create a new payment request.');
+      return;
+    }
     await Clipboard.setData(ClipboardData(text: _link));
     if (!mounted) return;
     showTopNotice(context, message: 'Payment link copied.');
   }
 
   Future<void> _shareLink() async {
+    if (_link.isEmpty) {
+      showTopNotice(context,
+          message:
+              'This old request has no payment link. Create a new payment request.');
+      return;
+    }
     final request = _request;
     final text = request == null
         ? _link
