@@ -12,7 +12,7 @@ class ApiConfig {
   /// calling payment-engine directly.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://2settlemobile.vercel.app',
+    defaultValue: 'https://2settle-mobile-app.vercel.app',
   );
 
   /// payment-engine's real domain. Only its public routes (end-user

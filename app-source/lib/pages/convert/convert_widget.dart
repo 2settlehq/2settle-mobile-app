@@ -218,6 +218,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
     SettleNumericKeypad.show(
       context,
       title: 'Enter amount',
+      submitLabel: 'Done',
       initialValue: _amountController.text,
       allowDecimal: true,
       showPreview: false,
@@ -241,6 +242,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
     SettleNumericKeypad.show(
       context,
       title: 'Enter receive amount',
+      submitLabel: 'Done',
       initialValue: _receiveController.text,
       allowDecimal: true,
       onChanged: (value) {

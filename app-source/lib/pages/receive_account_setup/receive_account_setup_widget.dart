@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
+import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
@@ -100,15 +101,18 @@ class _ReceiveAccountSetupScaffoldState
     SettleNumericKeypad.show(
       context,
       title: 'Account number',
+      submitLabel: 'Save',
       initialValue: _accountController.text,
       maxLength: 20,
       onChanged: (value) {
         _accountController.text = value;
         safeSetState(() {});
       },
-      onDone: (value) {
+      onDone: (value) async {
         _accountController.text = value;
-        _queueValidation();
+        _validationDebounce?.cancel();
+        await _validateAccount();
+        if (mounted) _save();
       },
     );
   }
@@ -316,6 +320,7 @@ class _ReceiveAccountSetupScaffoldState
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     final bankName =
         widget.liveValidate ? _selectedBank : _bankController.text.trim();
     final accountNumber = _accountController.text.trim();
@@ -545,6 +550,11 @@ class _ReceiveAccountSetupScaffoldState
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
+      bottomNavigationBar: KeyboardSubmitBar(
+        text: 'Save',
+        isLoading: _isSaving,
+        onPressed: _save,
+      ),
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
         backgroundColor: _blue,
@@ -647,6 +657,8 @@ class _ReceiveAccountSetupScaffoldState
             const SizedBox(height: 10.0),
             TextFormField(
               controller: _labelController,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _save(),
               decoration: _inputDecoration('Save as'),
               style: theme.bodyMedium,
             ),

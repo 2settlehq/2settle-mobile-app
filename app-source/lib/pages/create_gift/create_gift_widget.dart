@@ -1,6 +1,8 @@
 import '/components/status_action_button.dart';
+import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
+import '/data/payment_networks.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -194,14 +196,7 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
   }
 
   String get _selectedNetworkForApi {
-    final network = _selectedNetwork.toLowerCase();
-    return switch (network) {
-      'bitcoin' => 'bitcoin',
-      'ethereum' => 'ethereum',
-      'binance' => 'bep20',
-      'tron' => 'trc20',
-      _ => network,
-    };
+    return paymentNetworkCode(crypto: _crypto, network: _selectedNetwork);
   }
 
   String _formatCryptoAmount(dynamic value, String crypto) {
@@ -239,18 +234,18 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
       return;
     }
 
-    final accessToken = await AuthService.getAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
-      showTopNotice(
-        context,
-        message: 'Your session has expired. Please sign in again.',
-        type: TopNoticeType.caution,
-      );
-      return;
-    }
-
     safeSetState(() => _creating = true);
     try {
+      final accessToken = await AuthService.getAccessToken();
+      if (!mounted) return;
+      if (accessToken == null || accessToken.isEmpty) {
+        showTopNotice(
+          context,
+          message: 'Your session has expired. Please sign in again.',
+          type: TopNoticeType.caution,
+        );
+        return;
+      }
       final mobileId = await MobileIdentityService.getOrCreateMobileId();
       final phone = await MobileIdentityService.getPhone();
       final response = await http
@@ -334,6 +329,11 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
     final theme = FlutterFlowTheme.of(context);
     final amount = _formatAmount(_amountController.text);
     return Scaffold(
+      bottomNavigationBar: KeyboardSubmitBar(
+        text: 'Continue',
+        isLoading: _creating,
+        onPressed: _continueToFunding,
+      ),
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF4F6FA),
@@ -421,6 +421,8 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _continueToFunding(),
                 decoration: _inputDecoration('Custom amount'),
                 style: GoogleFonts.inter(
                   color: theme.primaryText,

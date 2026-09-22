@@ -20,7 +20,7 @@ Do not edit generated folders such as `build/` or `.dart_tool/`; Flutter recreat
 
 ## Mobile API
 
-The app calls the deployed mobile API at `https://2settlemobile.vercel.app`. The source is in `mobile-api/`. Its deployment requires these environment variables, which are intentionally not stored in the source:
+The app calls the deployed mobile API at `https://2settle-mobile-app.vercel.app`. The source is in `mobile-api/`. Its deployment requires these environment variables, which are intentionally not stored in the source:
 
 - `TWOSETTLE_API_KEY`
 - `TWOSETTLE_SECRET_KEY`

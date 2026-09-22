@@ -1,4 +1,5 @@
 import '/components/status_action_button.dart';
+import '/components/keyboard_submit_bar.dart';
 import '/components/settle_numeric_keypad.dart';
 import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -663,6 +664,7 @@ class _LoginWidgetState extends State<LoginWidget> {
     SettleNumericKeypad.show(
       context,
       title: 'Phone number',
+      submitLabel: 'Continue',
       initialValue: _model.phoneNumberTextController?.text ?? '',
       maxLength: 15,
       onChanged: (value) {
@@ -672,6 +674,7 @@ class _LoginWidgetState extends State<LoginWidget> {
       onDone: (value) {
         _model.phoneNumberTextController?.text = value;
         safeSetState(() {});
+        _handleContinuePressed();
       },
     );
   }
@@ -684,6 +687,11 @@ class _LoginWidgetState extends State<LoginWidget> {
         FocusManager.instance.primaryFocus?.unfocus();
       },
       child: Scaffold(
+        bottomNavigationBar: KeyboardSubmitBar(
+          text: 'Continue',
+          isLoading: _isContinuing,
+          onPressed: _handleContinuePressed,
+        ),
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: Container(
@@ -1039,6 +1047,9 @@ class _LoginWidgetState extends State<LoginWidget> {
                                       ? _openPhoneKeypad
                                       : null,
                                   keyboardType: _keyboardType,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) =>
+                                      _handleContinuePressed(),
                                   obscureText: false,
                                   decoration: InputDecoration(
                                     labelText: _inputLabel,
