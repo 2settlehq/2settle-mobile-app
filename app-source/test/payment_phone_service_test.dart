@@ -68,9 +68,10 @@ void main() {
           return http.Response('{"success":true}', 200);
         }));
     addTearDown(service.close);
-    await service.requestCode('+234 801 234 5678');
-    await service.linkPhone('+234 801 234 5678', '123456');
+    await service.requestCode('0801 234 5678');
+    await service.linkPhone('0801 234 5678', '123456');
     expect(requests[0].url.path, '/v1/users/auth/otp/request');
+    expect(jsonDecode(requests[0].body)['identifier'], '+2348012345678');
     expect(requests[0].headers.containsKey('authorization'), false);
     expect(requests[1].url.path, '/v1/users/me/identities/otp/verify');
     expect(requests[1].headers['authorization'], 'Bearer current-token');
@@ -124,11 +125,24 @@ void main() {
         service.verifiedPhone(), throwsA(isA<PaymentPhoneException>()));
   });
 
-  test('requires explicit country code rather than guessing for local numbers',
+  test('normalizes Nigerian local numbers and preserves international numbers',
       () {
     expect(PaymentPhoneService.normalizePhone('+234 (801) 234-5678'),
         '+2348012345678');
-    expect(() => PaymentPhoneService.normalizePhone('08012345678'),
-        throwsA(isA<PaymentPhoneException>()));
+    expect(PaymentPhoneService.normalizePhone('08012345678'), '+2348012345678');
+    expect(PaymentPhoneService.normalizePhone('07012345678'), '+2347012345678');
+    expect(PaymentPhoneService.normalizePhone('09012345678'), '+2349012345678');
+    expect(
+        PaymentPhoneService.normalizePhone('2348012345678'), '+2348012345678');
+    expect(PaymentPhoneService.normalizePhone('+14155552671'), '+14155552671');
+    for (final invalid in [
+      '080123456789',
+      '0801234567',
+      '00012345678',
+      'abc'
+    ]) {
+      expect(() => PaymentPhoneService.normalizePhone(invalid),
+          throwsA(isA<PaymentPhoneException>()));
+    }
   });
 }

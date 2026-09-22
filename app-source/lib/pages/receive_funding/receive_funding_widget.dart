@@ -1,3 +1,6 @@
+import '/config/api_config.dart';
+import '/services/auth_service.dart';
+import 'package:http/http.dart' as http;
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -68,6 +71,8 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
   late String _network;
   int _fundingStage = -1;
   bool _isConfirmingFunding = false;
+  String _backendStatus = '';
+  String? _fundingError;
 
   static const _addresses = {
     'USDT_TRC20': 'TR2SettleDemoX9aQp4rN7u8mK2sV6yW',
@@ -129,16 +134,62 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
       _fundingStage = 0;
     });
 
-    for (var stage = 1; stage < 4; stage++) {
-      await Future.delayed(const Duration(milliseconds: 720));
+    try {
+      if (widget.reference.isEmpty)
+        throw Exception('Payment reference is missing.');
+      final token = await AuthService.getAccessToken();
+      if (token == null) throw Exception('Please sign in again.');
+      final response = await http.get(
+        Uri.parse(
+            '${ApiConfig.paymentsUrl}/${Uri.encodeComponent(widget.reference)}'),
+        headers: {
+          'accept': 'application/json',
+          'authorization': 'Bearer $token'
+        },
+      ).timeout(const Duration(seconds: 14));
+      final payload = jsonDecode(response.body);
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          payload is! Map ||
+          payload['ok'] == false) {
+        throw Exception(payload is Map
+            ? payload['error'] ?? 'Could not check payment.'
+            : 'Could not check payment.');
+      }
+      final payment = payload['payment'];
+      final status =
+          payment is Map ? '${payment['status'] ?? ''}'.toLowerCase() : '';
+      if (status.isEmpty) throw Exception('Payment status is unavailable.');
       if (!mounted) return;
-      safeSetState(() => _fundingStage = stage);
+      final complete = status == 'settled' ||
+          (widget.purpose == 'create_gift' &&
+              ['confirmed', 'settling'].contains(status));
+      safeSetState(() {
+        _backendStatus = status;
+        _fundingStage = complete ? 3 : -1;
+        _fundingError = complete
+            ? null
+            : 'Payment status: $status. You can check again shortly.';
+      });
+      if (_fundingError != null) {
+        showTopNotice(context,
+            message: _fundingError!, type: TopNoticeType.caution);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      safeSetState(() {
+        _fundingStage = -1;
+        _fundingError = error.toString().replaceFirst('Exception: ', '');
+      });
+      showTopNotice(context,
+          message: _fundingError!, type: TopNoticeType.caution);
+    } finally {
+      if (mounted) safeSetState(() => _isConfirmingFunding = false);
     }
-
-    safeSetState(() => _isConfirmingFunding = false);
   }
 
   Future<void> _continueToConfirmed() async {
+    if (_isConfirmingFunding || _fundingError != null) return;
     if (widget.purpose == 'create_gift') {
       await context.pushNamed(
         GiftCreatedWidget.routeName,
@@ -166,24 +217,8 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
       });
       return;
     }
-    await context.pushNamed(
-      ConfirmationPageWidget.routeName,
-      queryParameters: {
-        'settlementAmount': widget.settlementAmount,
-        'cryptoAmount': _cryptoOnlyAmount,
-        'crypto': _crypto,
-        'network': _network,
-        'beneficiaryName': widget.beneficiaryName,
-        'bankName': widget.bankName,
-        'accountNumber': widget.accountNumber,
-        'rate': widget.rate,
-      },
-    );
-    if (!mounted) return;
-    safeSetState(() {
-      _fundingStage = -1;
-      _isConfirmingFunding = false;
-    });
+    if (_fundingError != null || _backendStatus != 'settled') return;
+    context.pop(true);
   }
 
   Widget _fundingStat({
@@ -393,7 +428,9 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
   Widget _giftFundingNotice() {
     if (widget.purpose != 'create_gift') return const SizedBox.shrink();
     final theme = FlutterFlowTheme.of(context);
-    final status = widget.paymentStatus.toLowerCase();
+    final status = _backendStatus.isEmpty
+        ? widget.paymentStatus.toLowerCase()
+        : _backendStatus;
     final funded = status == 'confirmed' ||
         status == 'settling' ||
         status == 'settled' ||

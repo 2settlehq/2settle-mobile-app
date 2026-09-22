@@ -7,6 +7,7 @@ import '/index.dart';
 import '/services/auth_service.dart';
 import '/services/debug_error_logger.dart';
 import '/components/payment_phone_prompt.dart';
+import '/services/transfer_flow_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -57,6 +58,25 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
   static const _paymentsUrl = ApiConfig.paymentsUrl;
   bool _isConfirming = false;
 
+  String? _userId;
+  String get _draftKey => jsonEncode([
+        _userId,
+        widget.settlementAmount,
+        widget.bankCode,
+        widget.accountNumber,
+        widget.crypto,
+        widget.networkCode,
+      ]);
+
+  Future<void> _openFunding(Map<String, String> params) async {
+    final completed = await context.pushNamed<bool>(
+        ReceiveFundingWidget.routeName,
+        queryParameters: params);
+    if (!mounted || completed != true) return;
+    TransferFlowCache.complete(_draftKey);
+    context.pop(params);
+  }
+
   String get _settlementText => '₦${widget.settlementAmount}';
   String get _cryptoOnlyAmount {
     final number =
@@ -75,7 +95,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
   static const _processingFee = 1000.0;
 
   void _goBack() {
-    context.pushNamed(MainTransactionWidget.routeName);
+    if (context.canPop()) context.pop();
   }
 
   void _closeToHome() {
@@ -295,8 +315,9 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
     required String reference,
     required String status,
   }) async {
-    final settlement =
-        double.tryParse(settlementAmount.replaceAll(',', '').replaceAll('₦', '')) ?? 0;
+    final settlement = double.tryParse(
+            settlementAmount.replaceAll(',', '').replaceAll('₦', '')) ??
+        0;
     final cryptoValue =
         double.tryParse(cryptoAmount.split(' ').first.trim()) ?? 0;
     if (settlement <= 0 && cryptoValue <= 0) {
@@ -319,7 +340,9 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
 
     final now = DateTime.now();
     transactions.insert(0, {
-      'id': reference.isNotEmpty ? reference : '2ST-${now.microsecondsSinceEpoch}',
+      'id': reference.isNotEmpty
+          ? reference
+          : '2ST-${now.microsecondsSinceEpoch}',
       'createdAt': now.toIso8601String(),
       'settlementAmount': settlementAmount,
       'cryptoAmount': cryptoAmount,
@@ -363,7 +386,10 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
     if (_isConfirming) return;
 
     final fiatAmount = double.tryParse(
-          widget.settlementAmount.replaceAll(',', '').replaceAll('₦', '').trim(),
+          widget.settlementAmount
+              .replaceAll(',', '')
+              .replaceAll('₦', '')
+              .trim(),
         ) ??
         0;
     if (fiatAmount <= 0) {
@@ -384,6 +410,14 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
 
     safeSetState(() => _isConfirming = true);
     try {
+      _userId = await AuthService.getUserId();
+      if (!mounted) return;
+      final cached = TransferFlowCache.get(_draftKey);
+      if (cached != null) {
+        await _openFunding(cached);
+        return;
+      }
+
       final phone = await ensurePaymentPhone(context);
       if (!mounted || phone == null) return;
       final accessToken = await AuthService.getAccessToken();
@@ -439,6 +473,25 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
       final reference = '${payment['reference'] ?? ''}';
       final charge = payment['charge'];
 
+      final fundingParams = <String, String>{
+        'settlementAmount': settlementAmount,
+        'cryptoAmount': cryptoAmount,
+        'crypto': crypto,
+        'network': widget.network,
+        'beneficiaryName': widget.beneficiaryName,
+        'bankName': widget.bankName,
+        'accountNumber': widget.accountNumber,
+        'rate': '${payment['rate'] ?? widget.rate}',
+        'paymentId': '${payment['id'] ?? ''}',
+        'reference': reference,
+        'depositAddress': depositAddress,
+        'paymentStatus': '${payment['status'] ?? 'pending'}',
+        'expiresAt': '${payment['expiresAt'] ?? ''}',
+        'chargeFiat': '${charge is Map ? charge['fiat'] ?? '' : ''}',
+        'chargeCrypto': '${charge is Map ? charge['crypto'] ?? '' : ''}',
+        'transactionUsd': '${payment['transactionUsd'] ?? ''}',
+      };
+      TransferFlowCache.save(_draftKey, fundingParams);
       await _saveInitiatedTransaction(
         settlementAmount: settlementAmount,
         cryptoAmount: cryptoAmount,
@@ -446,29 +499,8 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
         status: 'funding',
       );
       if (!mounted) return;
-      await context.pushNamed(
-        ReceiveFundingWidget.routeName,
-        queryParameters: {
-          'settlementAmount': settlementAmount,
-          'cryptoAmount': cryptoAmount,
-          'crypto': crypto,
-          'network': widget.network,
-          'beneficiaryName': widget.beneficiaryName,
-          'bankName': widget.bankName,
-          'accountNumber': widget.accountNumber,
-          'rate': '${payment['rate'] ?? widget.rate}',
-          'paymentId': '${payment['id'] ?? ''}',
-          'reference': reference,
-          'depositAddress': depositAddress,
-          'paymentStatus': '${payment['status'] ?? 'pending'}',
-          'expiresAt': '${payment['expiresAt'] ?? ''}',
-          'chargeFiat':
-              '${charge is Map ? charge['fiat'] ?? '' : ''}',
-          'chargeCrypto':
-              '${charge is Map ? charge['crypto'] ?? '' : ''}',
-          'transactionUsd': '${payment['transactionUsd'] ?? ''}',
-        }.withoutNulls,
-      );
+
+      await _openFunding(fundingParams);
     } catch (error) {
       logTransactionError('payment_exception',
           code: error.runtimeType.toString(), message: error.toString());

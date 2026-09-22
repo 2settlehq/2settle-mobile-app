@@ -1,6 +1,7 @@
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/components/status_action_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -17,6 +18,7 @@ class SettleNumericKeypad extends StatefulWidget {
     this.showPreview = false,
     this.submitLabel,
     this.requiredLength,
+    this.submitEnabled,
   });
 
   final String title;
@@ -29,6 +31,7 @@ class SettleNumericKeypad extends StatefulWidget {
   final bool showPreview;
   final String? submitLabel;
   final int? requiredLength;
+  final ValueListenable<bool>? submitEnabled;
 
   static Future<void> show(
     BuildContext context, {
@@ -42,6 +45,7 @@ class SettleNumericKeypad extends StatefulWidget {
     bool showPreview = false,
     String? submitLabel,
     int? requiredLength,
+    ValueListenable<bool>? submitEnabled,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -61,6 +65,7 @@ class SettleNumericKeypad extends StatefulWidget {
         showPreview: showPreview,
         submitLabel: submitLabel,
         requiredLength: requiredLength,
+        submitEnabled: submitEnabled,
       ),
     );
   }
@@ -76,7 +81,8 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
   bool _submitted = false;
 
   bool get _canSubmit =>
-      widget.requiredLength == null || _value.length == widget.requiredLength;
+      (widget.submitEnabled?.value ?? true) &&
+      (widget.requiredLength == null || _value.length == widget.requiredLength);
 
   void _submit() {
     if (_submitted || !_canSubmit) return;
@@ -117,6 +123,17 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
   void initState() {
     super.initState();
     _value = widget.initialValue;
+    widget.submitEnabled?.addListener(_refreshSubmit);
+  }
+
+  void _refreshSubmit() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.submitEnabled?.removeListener(_refreshSubmit);
+    super.dispose();
   }
 
   void _tap(String key) {
@@ -297,6 +314,7 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
                 Opacity(
                   opacity: _canSubmit ? 1.0 : 0.5,
                   child: StatusActionButton(
+                    enabled: _canSubmit,
                     text: widget.submitLabel!,
                     isLoading: false,
                     isDone: false,

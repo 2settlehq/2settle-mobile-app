@@ -44,6 +44,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // a notification, a phone call.
   static const _autoLockAfter = Duration(seconds: 60);
   DateTime? _backgroundedAt;
+  bool _lockScreenOpen = false;
 
   // Screens where a PIN prompt either doesn't make sense yet (no session/PIN
   // to protect) or would stomp on a flow already dealing with the PIN, so
@@ -111,16 +112,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _maybeAutoLock() async {
+    if (_lockScreenOpen) return;
     final backgroundedAt = _backgroundedAt;
     _backgroundedAt = null;
     if (backgroundedAt == null) return;
     if (DateTime.now().difference(backgroundedAt) < _autoLockAfter) return;
     if (!await PinService.hasPin()) return;
     if (_autoLockExemptRoutes.contains(getRoute())) return;
-    _router.pushNamed(
-      ConfirmCodeWidget.routeName,
-      queryParameters: {'mode': 'unlock'},
-    );
+    if (!mounted || _lockScreenOpen) return;
+    _lockScreenOpen = true;
+    try {
+      await _router.pushNamed(
+        ConfirmCodeWidget.routeName,
+        queryParameters: {'mode': 'resume'},
+      );
+    } finally {
+      _lockScreenOpen = false;
+    }
   }
 
   void setThemeMode(ThemeMode mode) => safeSetState(() {

@@ -39,6 +39,7 @@ void main() {
     String initialValue = '',
     bool pin = true,
     bool amount = false,
+    ValueNotifier<bool>? submitEnabled,
   }) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -57,6 +58,7 @@ void main() {
                       ? 'Send'
                       : null,
               allowDecimal: amount,
+              submitEnabled: submitEnabled,
             ),
             child: const Text('Open'),
           );
@@ -66,6 +68,29 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Send and Enter stay disabled until bank validation succeeds',
+      (tester) async {
+    final enabled = ValueNotifier(false);
+    addTearDown(enabled.dispose);
+    final submitted = <String>[];
+    await openKeypad(tester, submitted.add,
+        initialValue: '100', pin: false, amount: true, submitEnabled: enabled);
+    await tester.tap(find.text('Send'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(submitted, isEmpty);
+    enabled.value = true;
+    await tester.pump();
+    enabled.value = false;
+    await tester.pump();
+    await tester.tap(find.text('Send'));
+    expect(submitted, isEmpty);
+    enabled.value = true;
+    await tester.pump();
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+    expect(submitted, ['100']);
+  });
 
   testWidgets('Confirm is above the digits and submits only a complete PIN',
       (tester) async {

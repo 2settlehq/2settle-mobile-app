@@ -67,6 +67,43 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   final List<_SavedBeneficiary> _savedBeneficiaries = [];
   Timer? _accountNameTypingTimer;
 
+  final _sendEnabled = ValueNotifier<bool>(false);
+  String? _validatedBankKey;
+  int _bankRequestId = 0;
+  DateTime? _estimateReceivedAt;
+
+  String get _bankInputKey =>
+      '${_bankCodes[_model.bankNameValue]}|${_model.accNoTextController?.text.trim()}';
+  bool get _bankIsValid =>
+      _validatedBankKey == _bankInputKey &&
+      _validatedAccountName?.isNotEmpty == true &&
+      _bankValidationMessage == null &&
+      !_isValidatingBank;
+  bool get _canSend =>
+      _bankIsValid &&
+      !_isSending &&
+      !_isSent &&
+      !_isEstimating &&
+      !_isRefreshingRate &&
+      _estimateError == null &&
+      _estimate != null &&
+      _estimatedInputKey == _estimateInputKey;
+  bool get _estimateIsFresh {
+    final expires = DateTime.tryParse(_estimate?['expiresAt'] ?? '');
+    final deadline =
+        expires ?? _estimateReceivedAt?.add(const Duration(seconds: 30));
+    return _estimate != null &&
+        _estimatedInputKey == _estimateInputKey &&
+        deadline != null &&
+        DateTime.now().isBefore(deadline);
+  }
+
+  void _updateForm(VoidCallback action) {
+    if (!mounted) return;
+    setState(action);
+    _sendEnabled.value = _canSend;
+  }
+
   final animationsMap = <String, AnimationInfo>{};
 
   double get _enteredAmount {
@@ -200,7 +237,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   void _queueEstimate() {
     // Invalidate both the old quote and any in-flight response immediately.
     _estimateRequestId++;
-    safeSetState(() {
+    _updateForm(() {
       _estimate = null;
       _estimatedInputKey = null;
       _estimateError = null;
@@ -218,12 +255,12 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   Future<void> _refreshRate() async {
     if (_isRefreshingRate) return;
     EasyDebounce.cancel('_estimate');
-    safeSetState(() => _isRefreshingRate = true);
+    _updateForm(() => _isRefreshingRate = true);
     try {
       await _loadLiveRate();
       if (mounted) await _fetchEstimate();
     } finally {
-      if (mounted) safeSetState(() => _isRefreshingRate = false);
+      if (mounted) _updateForm(() => _isRefreshingRate = false);
     }
   }
 
@@ -231,13 +268,14 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       '$_enteredAmount|$_selectedInputCurrency|$_selectedCrypto|$_selectedNetworkForApi|${_selectedInputCurrency == 'USD' ? _liveRate : ''}';
 
   Future<bool> _fetchEstimate() async {
+    if (_estimateIsFresh) return true;
     final requestId = ++_estimateRequestId;
     final inputKey = _estimateInputKey;
     final isCryptoAmount = _selectedInputCurrency == 'CRYPTO';
     final amount = isCryptoAmount ? _enteredAmount : _enteredAmountInNaira;
     if (!amount.isFinite || amount <= 0) {
       if (!mounted) return false;
-      safeSetState(() {
+      _updateForm(() {
         _estimate = null;
         _estimatedInputKey = null;
         _estimateError =
@@ -249,7 +287,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return false;
     }
 
-    safeSetState(() {
+    _updateForm(() {
       _isEstimating = true;
       _estimate = null;
       _estimatedInputKey = null;
@@ -279,7 +317,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
           response.statusCode, response.body);
       if (!mounted || requestId != _estimateRequestId) return false;
       final inputUnchanged = inputKey == _estimateInputKey;
-      safeSetState(() {
+      _updateForm(() {
         _estimate = inputUnchanged ? result.estimate : null;
         final fiatAmount = double.tryParse(_estimate?['fiatAmount'] ?? '');
         final missingFiatAmount = isCryptoAmount &&
@@ -287,6 +325,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
             (fiatAmount == null || !fiatAmount.isFinite || fiatAmount <= 0);
         if (missingFiatAmount) _estimate = null;
         _estimatedInputKey = _estimate == null ? null : inputKey;
+        _estimateReceivedAt = _estimate == null ? null : DateTime.now();
         _estimateError = inputUnchanged
             ? (missingFiatAmount
                 ? PaymentEstimateResult.unavailable
@@ -297,7 +336,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return _estimate != null;
     } catch (_) {
       if (!mounted || requestId != _estimateRequestId) return false;
-      safeSetState(() {
+      _updateForm(() {
         _estimate = null;
         _estimatedInputKey = null;
         _estimateError = PaymentEstimateResult.unavailable;
@@ -376,14 +415,14 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
 
       final rate = _parseRatePayload(payload);
       if (!mounted || rate == null) return;
-      safeSetState(() => _liveRate = rate);
+      _updateForm(() => _liveRate = rate);
     } catch (_) {
       // Keep the current rate while offline or if the endpoint is unavailable.
     }
   }
 
   Future<void> _loadBanks() async {
-    safeSetState(() => _isLoadingBanks = true);
+    _updateForm(() => _isLoadingBanks = true);
     try {
       final response = await http.get(
         Uri.parse(_banksUrl),
@@ -412,7 +451,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       }
 
       if (!mounted || next.isEmpty) return;
-      safeSetState(() {
+      _updateForm(() {
         _bankCodes = {
           ..._fallbackBankCodes,
           ...next,
@@ -421,7 +460,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     } catch (_) {
       // Keep fallback banks available offline.
     } finally {
-      if (mounted) safeSetState(() => _isLoadingBanks = false);
+      if (mounted) _updateForm(() => _isLoadingBanks = false);
     }
   }
 
@@ -446,7 +485,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
           .toList();
 
       if (!mounted) return;
-      safeSetState(() {
+      _updateForm(() {
         _savedBeneficiaries
           ..clear()
           ..addAll(loaded);
@@ -457,7 +496,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   }
 
   void _selectBeneficiary(_SavedBeneficiary beneficiary) {
-    safeSetState(() {
+    _updateForm(() {
       _model.bankNameValue = beneficiary.bank;
       _model.bankNameValueController ??= FormFieldController<String>(null);
       _model.bankNameValueController!.value = beneficiary.bank;
@@ -486,16 +525,17 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       context,
       title: 'Amount',
       submitLabel: 'Send',
+      submitEnabled: _sendEnabled,
       initialValue: _model.amountTextController?.text ?? '',
       allowDecimal: true,
       onChanged: (value) {
         _model.amountTextController?.text = value;
-        safeSetState(() {});
+        _updateForm(() {});
         _queueEstimate();
       },
       onDone: (value) {
         _model.amountTextController?.text = value;
-        safeSetState(() {});
+        _updateForm(() {});
         _submitTransaction();
       },
     );
@@ -527,16 +567,19 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       context,
       title: 'Account number',
       submitLabel: 'Send',
+      submitEnabled: _sendEnabled,
       requiredLength: 10,
       initialValue: _model.accNoTextController?.text ?? '',
       maxLength: 10,
       showPreview: showFallbackPreview,
       onChanged: (value) {
-        _model.accNoTextController?.text = value;
-        safeSetState(() {});
+        if (_model.accNoTextController?.text != value)
+          _model.accNoTextController?.text = value;
+        _updateForm(() {});
       },
       onDone: (value) {
-        _model.accNoTextController?.text = value;
+        if (_model.accNoTextController?.text != value)
+          _model.accNoTextController?.text = value;
         _submitTransaction();
       },
     );
@@ -548,7 +591,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
           FormFieldController<String>(null),
       options: _bankCodes.keys.toList(),
       onChanged: (val) {
-        safeSetState(() {
+        _updateForm(() {
           _model.bankNameValue = val;
           _validatedBankName = val;
           _validatedAccountName = null;
@@ -608,7 +651,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
 
   void _animateAccountName(String value) {
     _accountNameTypingTimer?.cancel();
-    safeSetState(() => _typedAccountName = '');
+    _updateForm(() => _typedAccountName = '');
 
     _accountNameTypingTimer =
         Timer.periodic(const Duration(milliseconds: 38), (timer) {
@@ -620,7 +663,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
         timer.cancel();
         return;
       }
-      safeSetState(() {
+      _updateForm(() {
         _typedAccountName = value.substring(0, _typedAccountName.length + 1);
       });
     });
@@ -637,12 +680,18 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   }
 
   Future<void> _validateBankAccount() async {
+    if (_bankIsValid) return;
+    final requestId = ++_bankRequestId;
+    _accountNameTypingTimer?.cancel();
+    final inputKey = _bankInputKey;
     final accountNumber = (_model.accNoTextController?.text ?? '').trim();
     final bankName = _model.bankNameValue;
     final bankCode = bankName == null ? null : _bankCodes[bankName];
 
-    if (accountNumber.length != 10 || bankCode == null) {
-      safeSetState(() {
+    if (!RegExp(r'^\d{10}$').hasMatch(accountNumber) || bankCode == null) {
+      _updateForm(() {
+        _validatedBankKey = null;
+        _isValidatingBank = false;
         _validatedBankName = bankName;
         _validatedAccountName = null;
         _typedAccountName = '';
@@ -652,7 +701,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return;
     }
 
-    safeSetState(() {
+    _updateForm(() {
       _isValidatingBank = true;
       _bankValidationMessage = null;
       _validatedAccountName = null;
@@ -677,7 +726,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
           ? <String, dynamic>{}
           : jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (!mounted) return;
+      if (!mounted || requestId != _bankRequestId || inputKey != _bankInputKey)
+        return;
 
       final accountName = _payloadString(
         payload,
@@ -685,46 +735,54 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       );
       final responseOk = response.statusCode >= 200 &&
           response.statusCode < 300 &&
-          payload['ok'] != false;
-      safeSetState(() {
+          payload['ok'] != false &&
+          payload['success'] != false &&
+          payload['valid'] != false &&
+          accountName?.isNotEmpty == true;
+      _updateForm(() {
         _validatedBankName = _payloadString(
               payload,
               const ['bankName', 'bank_name'],
             ) ??
             bankName ??
             _validatedBankName;
-        _validatedAccountName = accountName;
+        _validatedAccountName = responseOk ? accountName : null;
+        _validatedBankKey = responseOk ? inputKey : null;
         _bankValidationMessage = responseOk && accountName != null
             ? null
             : _payloadString(payload, const ['error', 'message']) ??
                 'Unable to validate account.';
         _isValidatingBank = false;
       });
-      if (accountName != null && accountName.isNotEmpty) {
+      if (responseOk && accountName != null && accountName.isNotEmpty) {
         _animateAccountName(accountName);
       }
     } catch (_) {
-      if (!mounted) return;
-      safeSetState(() {
+      if (!mounted || requestId != _bankRequestId || inputKey != _bankInputKey)
+        return;
+      _updateForm(() {
+        _validatedBankKey = null;
+        _isValidatingBank = false;
         _validatedBankName = bankName;
         _validatedAccountName = null;
         _typedAccountName = '';
         _bankValidationMessage = 'Unable to validate account.';
       });
     } finally {
-      if (mounted && _isValidatingBank) {
-        safeSetState(() => _isValidatingBank = false);
+      if (mounted && requestId == _bankRequestId && _isValidatingBank) {
+        _updateForm(() => _isValidatingBank = false);
       }
     }
   }
 
   Future<void> _submitTransaction() async {
-    if (_isSending || _isSent) return;
+    if (!_canSend) return;
     if (_model.formKey.currentState == null ||
         !_model.formKey.currentState!.validate()) {
       return;
     }
 
+    final bankInputKey = _bankInputKey;
     final bankName = _model.bankNameValue;
     final bankCode = bankName == null ? null : _bankCodes[bankName];
     if (!_enteredAmount.isFinite ||
@@ -741,7 +799,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return;
     }
 
-    safeSetState(() {
+    _updateForm(() {
       _isSending = true;
       _isSent = false;
     });
@@ -750,7 +808,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     final estimated = await _fetchEstimate();
     if (!mounted) return;
     if (!estimated) {
-      safeSetState(() => _isSending = false);
+      _updateForm(() => _isSending = false);
       showTopNotice(
         context,
         message: _estimateError ??
@@ -759,18 +817,24 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       );
       return;
     }
-    await _validateBankAccount();
     if (!mounted) return;
-    safeSetState(() {
+    if (!_bankIsValid || bankInputKey != _bankInputKey) {
+      _updateForm(() => _isSending = false);
+      return;
+    }
+    _updateForm(() {
       _isSending = false;
       _isSent = true;
     });
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
-    if (_estimate == null ||
+    if (!_bankIsValid ||
+        bankInputKey != _bankInputKey ||
+        _estimateError != null ||
+        _estimate == null ||
         _estimatedInputKey != _estimateInputKey ||
         _isEstimating) {
-      safeSetState(() {
+      _updateForm(() {
         _isSending = false;
         _isSent = false;
       });
@@ -781,7 +845,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       );
       return;
     }
-    await context.pushNamed(
+    final completed = await context.pushNamed<Map<String, String>>(
       ConfirmTransactionWidget.routeName,
       queryParameters: {
         'settlementAmount': _formattedEnteredAmount,
@@ -797,10 +861,26 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       }.withoutNulls,
     );
     if (!mounted) return;
-    safeSetState(() {
+    _updateForm(() {
       _isSending = false;
       _isSent = false;
+      if (completed != null) {
+        _model.amountTextController?.clear();
+        _model.accNoTextController?.clear();
+        _model.bankNameValue = null;
+        _model.bankNameValueController?.value = null;
+        _estimate = null;
+        _estimatedInputKey = null;
+        _estimateError = null;
+        _validatedBankKey = null;
+        _validatedAccountName = null;
+        _typedAccountName = '';
+      }
     });
+    if (completed != null) {
+      await context.pushNamed(ConfirmationPageWidget.routeName,
+          queryParameters: completed);
+    }
   }
 
   @override
@@ -816,6 +896,15 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     _model.accNoTextController ??= TextEditingController();
     _model.accNoFocusNode ??= FocusNode();
     _model.accNoTextController?.addListener(() {
+      _accountNameTypingTimer?.cancel();
+      _bankRequestId++;
+      _updateForm(() {
+        _validatedBankKey = null;
+        _validatedAccountName = null;
+        _typedAccountName = '';
+        _bankValidationMessage = null;
+        _isValidatingBank = false;
+      });
       EasyDebounce.debounce(
         '_model.accNoTextController.validate',
         const Duration(milliseconds: 700),
@@ -826,7 +915,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     _loadBanks();
     _loadSavedBeneficiaries();
     _rateRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _loadLiveRate();
+      if (ModalRoute.of(context)?.isCurrent == true && !_estimateIsFresh)
+        _loadLiveRate();
     });
 
     animationsMap.addAll({
@@ -848,6 +938,9 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   @override
   void dispose() {
     EasyDebounce.cancel('_estimate');
+    EasyDebounce.cancel('_model.accNoTextController.validate');
+    _bankRequestId++;
+    _sendEnabled.dispose();
     _estimateRequestId++;
     _rateRefreshTimer?.cancel();
     _accountNameTypingTimer?.cancel();
@@ -993,7 +1086,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                         ['USD', 'NGN', 'CRYPTO']),
                                     optionLabels: ['USD', 'NGN', 'CRYPTO'],
                                     onChanged: (val) {
-                                      safeSetState(
+                                      _updateForm(
                                           () => _model.budgetValue = val);
                                       _queueEstimate();
                                     },
@@ -1055,7 +1148,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                         onChanged: (_) => EasyDebounce.debounce(
                                           '_model.amountTextController',
                                           Duration(milliseconds: 2000),
-                                          () => safeSetState(() {}),
+                                          () => _updateForm(() {}),
                                         ),
                                         autofocus: true,
                                         obscureText: false,
@@ -1372,7 +1465,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                               'ETH'
                                             ],
                                             onChanged: (val) {
-                                              safeSetState(() {
+                                              _updateForm(() {
                                                 _model.cryptoValue = val;
                                                 if (val == 'USDT') {
                                                   _model.cryptoNetworkValue ??=
@@ -1463,7 +1556,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                                   'BEP20',
                                                 ],
                                                 onChanged: (val) {
-                                                  safeSetState(() => _model
+                                                  _updateForm(() => _model
                                                           .cryptoNetworkValue =
                                                       val);
                                                   _queueEstimate();
@@ -1917,9 +2010,11 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                           text: 'Send',
                           isLoading: _isSending,
                           isDone: _isSent,
+                          enabled: _canSend,
                           onPressed: _submitTransaction,
                           idleIcon: Icons.send_rounded,
-                          backgroundColor: Colors.white,
+                          backgroundColor:
+                              _canSend ? Colors.white : Colors.grey.shade300,
                           textColor: const Color(0xFF4472C4),
                           iconBackgroundColor: const Color(0xFF4472C4),
                           iconColor: Colors.white,
