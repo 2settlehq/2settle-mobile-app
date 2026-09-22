@@ -738,6 +738,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               path: ConfirmTransactionWidget.routePath,
               requireAuth: true,
               builder: (context, params) => ConfirmTransactionWidget(
+                bankCode:
+                    params.getParam<String>('bankCode', ParamType.String) ?? '',
+                networkCode:
+                    params.getParam<String>('networkCode', ParamType.String) ??
+                        'trc20',
                 settlementAmount: params.getParam<String>(
                       'settlementAmount',
                       ParamType.String,

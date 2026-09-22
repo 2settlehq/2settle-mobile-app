@@ -1,6 +1,15 @@
 import crypto from "node:crypto";
+import { safeErrorText, errorFields } from "./errorLogging.js";
 
 export function json(res, status, body) {
+  if (status >= 400 || body?.ok === false || body?.success === false) {
+    console.error(JSON.stringify({
+      event: "mobile_api_error", status,
+      method: res.req?.method,
+      route: safeErrorText(res.req?.url?.split("?")[0]),
+      ...errorFields(body),
+    }));
+  }
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.status(status).json(body);
 }
@@ -113,7 +122,25 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const data = await response.clone().json().catch(() => null);
+    if (!response.ok || data?.success === false || data?.ok === false) {
+      console.error(JSON.stringify({
+        event: "upstream_error", method: options.method || "GET",
+        route: safeErrorText(new URL(url).pathname), status: response.status,
+        requestId: safeErrorText(response.headers.get("x-request-id")),
+        ...errorFields(data),
+      }));
+    }
+    return response;
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "upstream_exception", method: options.method || "GET",
+      route: safeErrorText(new URL(url).pathname),
+      code: safeErrorText(error?.code || error?.name),
+      message: safeErrorText(error?.message),
+    }));
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
