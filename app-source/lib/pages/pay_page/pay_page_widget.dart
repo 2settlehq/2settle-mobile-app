@@ -1,3 +1,5 @@
+import '/components/payment_phone_prompt.dart';
+import '/services/payment_request_service.dart';
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
 import '/components/keyboard_submit_bar.dart';
@@ -44,7 +46,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   final _amountFocusNode = FocusNode();
 
   String _currency = 'NGN';
-  String _expiry = '24 hours';
+  String _expiry = 'Default expiry';
   DateTime? _customExpiryDate;
   String _usage = 'Use once';
   String _settlementMode = 'Default account';
@@ -62,6 +64,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   List<String> get _expiryOptions {
     if (_expiry.startsWith('Expires ')) {
       return [
+        'Default expiry',
         '24 hours',
         '3 days',
         '7 days',
@@ -70,7 +73,14 @@ class _PayPageWidgetState extends State<PayPageWidget> {
         'No expiry'
       ];
     }
-    return ['24 hours', '3 days', '7 days', 'Custom date', 'No expiry'];
+    return [
+      'Default expiry',
+      '24 hours',
+      '3 days',
+      '7 days',
+      'Custom date',
+      'No expiry'
+    ];
   }
 
   @override
@@ -174,7 +184,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
         .toList();
   }
 
-  String _receiveLink(String id) => 'https://receive.2settle.io/pay/$id';
+  String _receiveLink(String id) => paymentRequestLink(id);
 
   Future<void> _syncReceiveActivity(_ReceiveRequest request) async {
     final prefs = await SharedPreferences.getInstance();
@@ -264,10 +274,6 @@ class _PayPageWidgetState extends State<PayPageWidget> {
     });
   }
 
-  String get _expiryLabel {
-    return _expiry;
-  }
-
   bool get _isCryptoCurrency =>
       const ['USDT', 'BTC', 'ETH', 'BNB', 'TRX'].contains(_currency);
 
@@ -307,48 +313,108 @@ class _PayPageWidgetState extends State<PayPageWidget> {
 
   Future<void> _createRequest() async {
     if (_isCreating || _isCreated) return;
-    if (_amountController.text.trim().isEmpty) {
-      _showNoticeSnackBar('Enter amount to receive.');
+    final amount =
+        double.tryParse(_amountController.text.replaceAll(',', '').trim());
+    if (amount == null || !amount.isFinite || amount <= 0) {
+      _showNoticeSnackBar('Enter a valid amount to receive.');
       return;
     }
+    if (_currency != 'NGN') {
+      _showNoticeSnackBar(
+          'Payment requests currently support NGN amounts only.');
+      return;
+    }
+    if (_usage != 'Use once' || _payerCanEdit || _expiry != 'Default expiry') {
+      _showNoticeSnackBar(
+          'Use a fixed amount, Use once, and Default expiry. Other request settings are not supported yet.');
+      return;
+    }
+    if (_settlementMode == '2Settle custom account') {
+      _showNoticeSnackBar(
+          'Choose your own bank account. Custom account requests are not available yet.');
+      return;
+    }
+    final defaults = _beneficiaries.where((item) => item.isDefault).toList();
+    final beneficiary = _settlementMode == 'Saved beneficiary'
+        ? _selectedBeneficiary
+        : defaults.isNotEmpty
+            ? defaults.first
+            : _beneficiaries.firstOrNull;
+    final manual = _settlementMode == 'Input account number';
+    final bankName = manual ? _inputBankName : beneficiary?.bank;
+    final bankCode = _bankCodes[bankName];
+    final accountNumber = manual
+        ? _accountController.text.trim()
+        : beneficiary?.accountNumber.trim();
+    if (bankCode == null ||
+        accountNumber == null ||
+        !RegExp(r'^\d{10}$').hasMatch(accountNumber)) {
+      _showNoticeSnackBar(
+          'Choose a bank and a valid 10-digit receiver account.');
+      return;
+    }
+    final description = _descriptionController.text.trim().isEmpty
+        ? '2Settle payment request'
+        : _descriptionController.text.trim();
+    final destination = _destinationLabel;
+    final settlementMode = _settlementMode;
     safeSetState(() {
       _isCreating = true;
       _isCreated = false;
     });
-    await Future.delayed(const Duration(milliseconds: 650));
-    final request = _ReceiveRequest(
-      id: 'RCV-${DateTime.now().millisecondsSinceEpoch}',
-      amount: _amountController.text.trim(),
-      currency: _currency,
-      description: _descriptionController.text.trim().isEmpty
-          ? '2Settle payment request'
-          : _descriptionController.text.trim(),
-      expiry: _expiry,
-      expiryLabel: _expiryLabel,
-      usage: _usage,
-      payerCanEdit: _payerCanEdit,
-      settlementMode: _settlementMode,
-      settlementLabel: _destinationLabel,
-      network: _isCryptoCurrency ? _network : '',
-      accountNumber: _accountController.text.trim(),
-      status: 'created',
-      createdAt: DateTime.now(),
-    );
-    safeSetState(() {
-      _requests = [request, ..._requests];
-      _isCreating = false;
-      _isCreated = true;
-      _amountController.clear();
-      _descriptionController.clear();
-      _accountController.clear();
-      _inputAccountName = null;
-      _inputBankName = null;
-    });
-    await _saveRequests();
-    await _syncReceiveActivity(request);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    safeSetState(() => _isCreated = false);
+    try {
+      final phone = await ensurePaymentPhone(context);
+      if (!mounted || phone == null) return;
+      final token = await AuthService.getAccessToken();
+      if (token == null || token.isEmpty)
+        throw Exception('Please sign in again.');
+      final payment = await PaymentRequestService.create(
+          token: token,
+          amount: amount,
+          currency: 'NGN',
+          bankCode: bankCode,
+          accountNumber: accountNumber,
+          description: description);
+      final reference = payment['reference'] as String;
+      final expiresAt = DateTime.tryParse('${payment['expiresAt'] ?? ''}');
+      final expiry = expiresAt == null
+          ? 'Default expiry'
+          : 'Expires ${DateFormat('d MMM yyyy, HH:mm').format(expiresAt.toLocal())}';
+      final request = _ReceiveRequest(
+        id: reference,
+        amount: '${payment['fiatAmount'] ?? amount}',
+        currency: '${payment['fiatCurrency'] ?? 'NGN'}',
+        description: description,
+        expiry: expiry,
+        expiryLabel: expiry,
+        usage: 'Use once',
+        payerCanEdit: false,
+        settlementMode: settlementMode,
+        settlementLabel: destination,
+        network: '',
+        accountNumber: accountNumber,
+        status: '${payment['status'] ?? 'created'}',
+        createdAt: DateTime.now(),
+      );
+      if (!mounted) return;
+      safeSetState(() {
+        _requests = [request, ..._requests];
+        _isCreated = true;
+      });
+      await _saveRequests();
+      await _syncReceiveActivity(request);
+      if (!mounted) return;
+      _showNoticeSnackBar('Payment request created: $reference');
+    } catch (error) {
+      if (mounted)
+        _showNoticeSnackBar(error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) safeSetState(() => _isCreating = false);
+    }
+    if (_isCreated) {
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (mounted) safeSetState(() => _isCreated = false);
+    }
   }
 
   TextStyle _labelStyle(BuildContext context) {
