@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import '/services/auth_service.dart';
 import '/services/debug_error_logger.dart';
+import '/components/payment_phone_prompt.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -381,19 +382,14 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
       return;
     }
 
-    final accessToken = await AuthService.getAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
-      if (!mounted) return;
-      showTopNotice(
-        context,
-        message: 'Your session has expired. Please sign in again.',
-        type: TopNoticeType.caution,
-      );
-      return;
-    }
-
     safeSetState(() => _isConfirming = true);
     try {
+      final phone = await ensurePaymentPhone(context);
+      if (!mounted || phone == null) return;
+      final accessToken = await AuthService.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        throw Exception('Your session has expired. Please sign in again.');
+      }
       final response = await http
           .post(
             Uri.parse(_paymentsUrl),
@@ -409,6 +405,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
               'crypto': widget.crypto,
               'network': widget.networkCode,
               'chargeFrom': 'crypto',
+              'payer': {'phone': phone},
               'receiver': {
                 'bankCode': widget.bankCode,
                 'accountNumber': widget.accountNumber,
