@@ -5,6 +5,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import '/services/auth_service.dart';
+import '/services/debug_error_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -370,6 +371,8 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
       return;
     }
     if (widget.bankCode.isEmpty || widget.accountNumber.isEmpty) {
+      logTransactionError('beneficiary_validation',
+          message: 'Missing bankCode or accountNumber');
       showTopNotice(
         context,
         message: 'Select a valid beneficiary account.',
@@ -421,6 +424,10 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
           decoded['ok'] != false &&
           decoded['success'] != false;
       if (!ok) {
+        logTransactionError('payment_response',
+            status: response.statusCode,
+            code: decoded['code'],
+            message: decoded['message'] ?? decoded['error']);
         final message = decoded['message'] ??
             decoded['error'] ??
             'Unable to create payment.';
@@ -466,6 +473,8 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
         }.withoutNulls,
       );
     } catch (error) {
+      logTransactionError('payment_exception',
+          code: error.runtimeType.toString(), message: error.toString());
       if (!mounted) return;
       showTopNotice(
         context,
