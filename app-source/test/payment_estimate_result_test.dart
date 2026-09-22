@@ -7,6 +7,9 @@ void main() {
   for (final message in [
     'Amount is below the supported minimum.',
     'Amount exceeds the supported maximum.',
+    'Amount exceeds maximum limit. Maximum is 0.01732628 BTC.',
+    'Amount exceeds maximum limit. Maximum is 2.5 BNB.',
+    'Amount exceeds maximum limit. Maximum is ₦2,000,000.',
   ]) {
     test('retains the server limit error: $message', () {
       final result = PaymentEstimateResult.fromResponse(

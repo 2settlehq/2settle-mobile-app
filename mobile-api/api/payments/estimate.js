@@ -25,7 +25,8 @@ const NETWORKS = new Set([
 
 function normalizePayload(body) {
   return {
-    fiatAmount: Number(body?.fiatAmount),
+    ...(body?.fiatAmount !== undefined ? { fiatAmount: Number(body.fiatAmount) } : {}),
+    ...(body?.cryptoAmount !== undefined ? { cryptoAmount: Number(body.cryptoAmount) } : {}),
     fiatCurrency: String(body?.fiatCurrency || "NGN").trim().toUpperCase(),
     crypto: String(body?.crypto || "").trim().toUpperCase(),
     network: String(body?.network || "").trim().toLowerCase(),
@@ -58,8 +59,15 @@ export default async function handler(req, res) {
   }
 
   const payload = normalizePayload(req.body || {});
-  if (!Number.isFinite(payload.fiatAmount) || payload.fiatAmount <= 0) {
-    return json(res, 400, { ok: false, error: "Valid fiatAmount is required." });
+  const hasFiat = payload.fiatAmount !== undefined;
+  const hasCrypto = payload.cryptoAmount !== undefined;
+  if (!hasFiat && !hasCrypto) {
+    return json(res, 400, { ok: false, error: "Either fiatAmount or cryptoAmount is required." });
+  }
+  for (const field of ["fiatAmount", "cryptoAmount"]) {
+    if (payload[field] !== undefined && (!Number.isFinite(payload[field]) || payload[field] <= 0)) {
+      return json(res, 400, { ok: false, error: `Valid ${field} is required.` });
+    }
   }
   if (!CRYPTO_CURRENCIES.has(payload.crypto)) {
     return json(res, 400, { ok: false, error: "A supported crypto is required." });

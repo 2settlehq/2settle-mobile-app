@@ -39,8 +39,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   static const _rateUrl = ApiConfig.rateUrl;
-  static const _cryptoPriceUrl =
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,tether,tron&vs_currencies=usd';
   static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _estimateUrl = ApiConfig.paymentsEstimateUrl;
@@ -57,13 +55,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   int _estimateRequestId = 0;
   bool _isEstimating = false;
   bool _isRefreshingRate = false;
-  Map<String, double> _cryptoUsdPrices = {
-    'BTC': 65000.0,
-    'ETH': 3200.0,
-    'BNB': 580.0,
-    'USDT': 1.0,
-    'TRX': 0.12,
-  };
   String? _validatedBankName;
   String? _validatedAccountName;
   String _typedAccountName = '';
@@ -111,9 +102,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     );
   }
 
-  double get _selectedCryptoUsdPrice =>
-      _cryptoUsdPrices[_selectedCrypto] ?? 1.0;
-
   double get _enteredAmountInNaira {
     final amount = _enteredAmount;
     final rate = _liveRate;
@@ -122,9 +110,9 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return rate == null || rate <= 0 ? 0 : amount * rate;
     }
     if (_selectedInputCurrency == 'CRYPTO') {
-      return rate == null || rate <= 0
-          ? 0
-          : amount * _selectedCryptoUsdPrice * rate;
+      // Crypto input is priced only by payment-engine, including its fees.
+      if (_estimatedInputKey != _estimateInputKey) return 0;
+      return double.tryParse(_estimate?['fiatAmount'] ?? '') ?? 0;
     }
     return amount;
   }
@@ -162,13 +150,19 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     if (rawAmount <= 0) {
       return 'Sending ₦0.00 at $_formattedLiveRate/\$';
     }
+    if (_selectedInputCurrency == 'CRYPTO' &&
+        (_estimate == null || _estimatedInputKey != _estimateInputKey)) {
+      return _estimateError != null
+          ? 'Unable to estimate $rawAmount $_selectedCrypto'
+          : 'Estimating $rawAmount $_selectedCrypto...';
+    }
     if ((_selectedInputCurrency == 'USD' ||
             _selectedInputCurrency == 'CRYPTO') &&
         (_displayRate == null || _displayRate! <= 0)) {
       return 'Sending ₦**** while live rate loads';
     }
     final suffix = _selectedInputCurrency == 'CRYPTO'
-        ? ' from ${_roundDownCrypto(rawAmount)} $_selectedCrypto'
+        ? ' from $rawAmount $_selectedCrypto'
         : _selectedInputCurrency == 'USD'
             ? ' from \$${_formatFiat(rawAmount)}'
             : '';
@@ -185,7 +179,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     // payment-engine) when we have one for the currently entered amount.
     final estimated = double.tryParse(_estimate?['cryptoAmount'] ?? '');
     if (estimated != null && estimated > 0) {
-      return '${_roundDownCrypto(estimated)} $_selectedCrypto';
+      return '${_estimate!['cryptoAmount']} $_selectedCrypto';
     }
 
     return 'Unavailable';
@@ -234,12 +228,13 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   }
 
   String get _estimateInputKey =>
-      '$_enteredAmountInNaira|$_selectedInputCurrency|$_selectedCrypto|$_selectedNetworkForApi';
+      '$_enteredAmount|$_selectedInputCurrency|$_selectedCrypto|$_selectedNetworkForApi|${_selectedInputCurrency == 'USD' ? _liveRate : ''}';
 
   Future<bool> _fetchEstimate() async {
     final requestId = ++_estimateRequestId;
     final inputKey = _estimateInputKey;
-    final amount = _enteredAmountInNaira;
+    final isCryptoAmount = _selectedInputCurrency == 'CRYPTO';
+    final amount = isCryptoAmount ? _enteredAmount : _enteredAmountInNaira;
     if (!amount.isFinite || amount <= 0) {
       if (!mounted) return false;
       safeSetState(() {
@@ -269,10 +264,14 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
               'content-type': 'application/json',
             },
             body: jsonEncode({
-              'fiatAmount': amount,
+              if (isCryptoAmount)
+                'cryptoAmount': amount
+              else
+                'fiatAmount': amount,
               'fiatCurrency': 'NGN',
               'crypto': _selectedCrypto,
               'network': _selectedNetworkForApi,
+              'chargeFrom': 'crypto',
             }),
           )
           .timeout(const Duration(seconds: 8));
@@ -282,9 +281,16 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       final inputUnchanged = inputKey == _estimateInputKey;
       safeSetState(() {
         _estimate = inputUnchanged ? result.estimate : null;
+        final fiatAmount = double.tryParse(_estimate?['fiatAmount'] ?? '');
+        final missingFiatAmount = isCryptoAmount &&
+            _estimate != null &&
+            (fiatAmount == null || !fiatAmount.isFinite || fiatAmount <= 0);
+        if (missingFiatAmount) _estimate = null;
         _estimatedInputKey = _estimate == null ? null : inputKey;
         _estimateError = inputUnchanged
-            ? result.error
+            ? (missingFiatAmount
+                ? PaymentEstimateResult.unavailable
+                : result.error)
             : 'The amount or rate changed. Please refresh the estimate.';
         _isEstimating = false;
       });
@@ -300,9 +306,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return false;
     }
   }
-
-  String _roundDownCrypto(double value) =>
-      ((value * 100000).floor() / 100000).toStringAsFixed(5);
 
   String _formatFiat(double value) =>
       NumberFormat('#,##0.00', 'en_US').format(value);
@@ -376,40 +379,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       safeSetState(() => _liveRate = rate);
     } catch (_) {
       // Keep the current rate while offline or if the endpoint is unavailable.
-    }
-  }
-
-  Future<void> _loadCryptoPrices() async {
-    try {
-      final response = await http.get(
-        Uri.parse(_cryptoPriceUrl),
-        headers: const {'accept': 'application/json'},
-      ).timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300) return;
-
-      final payload = jsonDecode(response.body);
-      if (payload is! Map) return;
-      final next = Map<String, double>.from(_cryptoUsdPrices);
-      const idMap = {
-        'BTC': 'bitcoin',
-        'ETH': 'ethereum',
-        'BNB': 'binancecoin',
-        'USDT': 'tether',
-        'TRX': 'tron',
-      };
-      for (final entry in idMap.entries) {
-        final raw = payload[entry.value];
-        if (raw is Map && raw['usd'] is num) {
-          final value = raw['usd'] as num;
-          if (value.isFinite) {
-            next[entry.key] = value.toDouble();
-          }
-        }
-      }
-      if (!mounted) return;
-      safeSetState(() => _cryptoUsdPrices = next);
-    } catch (_) {
-      // Keep fallback crypto prices while offline.
     }
   }
 
@@ -758,8 +727,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
 
     final bankName = _model.bankNameValue;
     final bankCode = bankName == null ? null : _bankCodes[bankName];
-    if (!_enteredAmountInNaira.isFinite ||
-        _enteredAmountInNaira <= 0 ||
+    if (!_enteredAmount.isFinite ||
+        _enteredAmount <= 0 ||
         bankCode == null ||
         !RegExp(r'^[0-9]{10}$')
             .hasMatch(_model.accNoTextController?.text.trim() ?? '')) {
@@ -854,12 +823,10 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       );
     });
     _loadLiveRate();
-    _loadCryptoPrices();
     _loadBanks();
     _loadSavedBeneficiaries();
     _rateRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _loadLiveRate();
-      _loadCryptoPrices();
     });
 
     animationsMap.addAll({
@@ -1024,7 +991,11 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                     ),
                                     options: List<String>.from(
                                         ['USD', 'NGN', 'CRYPTO']),
-                                    optionLabels: ['USD', 'NGN', 'CRYPTO'],
+                                    optionLabels: [
+                                      'USD',
+                                      'NGN',
+                                      _selectedCrypto
+                                    ],
                                     onChanged: (val) {
                                       safeSetState(
                                           () => _model.budgetValue = val);
