@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
+import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
@@ -104,15 +105,19 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
     SettleNumericKeypad.show(
       context,
       title: 'Account number',
+      submitLabel: 'Save',
+      requiredLength: 10,
       initialValue: _accountNumberController.text,
       maxLength: 10,
       onChanged: (value) {
         _accountNumberController.text = value;
         safeSetState(() {});
       },
-      onDone: (value) {
+      onDone: (value) async {
         _accountNumberController.text = value;
-        _queueAccountValidation();
+        _validationDebounce?.cancel();
+        await _validateAccount();
+        if (mounted) _saveBeneficiary();
       },
     );
   }
@@ -120,6 +125,7 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
   List<String> get _banks => _bankCodes.keys.toList();
 
   Future<void> _saveBeneficiary() async {
+    if (_isSaving) return;
     final accountName = _validatedAccountName?.trim() ?? '';
     final fallbackName = accountName.isNotEmpty ? accountName : 'Beneficiary';
     final name = _beneficiaryNameController.text.trim().isEmpty
@@ -653,6 +659,11 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
     final theme = FlutterFlowTheme.of(context);
 
     return Scaffold(
+      bottomNavigationBar: KeyboardSubmitBar(
+        text: 'Save',
+        isLoading: _isSaving,
+        onPressed: _saveBeneficiary,
+      ),
       key: scaffoldKey,
       backgroundColor: theme.secondaryBackground,
       appBar: AppBar(
@@ -776,6 +787,8 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
             const SizedBox(height: 8.0),
             TextFormField(
               controller: _beneficiaryNameController,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _saveBeneficiary(),
               decoration: _inputDecoration('Save as'),
               style: theme.bodyMedium,
             ),

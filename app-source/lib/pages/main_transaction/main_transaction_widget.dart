@@ -2,14 +2,17 @@ import 'dart:async';
 
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
+import '/components/top_notice.dart';
 import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
+import '/data/payment_networks.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/form_field_controller.dart';
 import '/index.dart';
+import '/services/payment_estimate_result.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -47,9 +50,11 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   double? _liveRate;
   // Server-computed estimate (cryptoAmount, crypto, network, fiatAmount,
   // conversionFee, processingFee) for the currently entered amount/crypto/
-  // network. Null until a successful estimate call lands, so the UI falls
-  // back to the client-side approximation below until then.
+  // network. Only a successful server estimate can be used to continue.
   Map<String, String>? _estimate;
+  String? _estimateError;
+  String? _estimatedInputKey;
+  int _estimateRequestId = 0;
   bool _isEstimating = false;
   bool _isRefreshingRate = false;
   Map<String, double> _cryptoUsdPrices = {
@@ -100,14 +105,10 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   // Machine-readable network code for the estimate/payment APIs, matching
   // the convention already used by create_gift_widget.dart.
   String get _selectedNetworkForApi {
-    final network = _selectedCryptoNetwork.toLowerCase();
-    return switch (network) {
-      'bitcoin' => 'bitcoin',
-      'ethereum' => 'ethereum',
-      'binance' => 'bep20',
-      'tron' => 'trc20',
-      _ => network,
-    };
+    return paymentNetworkCode(
+      crypto: _selectedCrypto,
+      network: _selectedCryptoNetwork,
+    );
   }
 
   double get _selectedCryptoUsdPrice =>
@@ -187,19 +188,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       return '${_roundDownCrypto(estimated)} $_selectedCrypto';
     }
 
-    // Fallback approximation while the estimate is loading, unavailable,
-    // or the endpoint hasn't been deployed yet — same math this screen
-    // used before the estimate call existed.
-    final rate = _liveRate;
-    if (rate == null || rate <= 0) {
-      return '0.00000 $_selectedCrypto';
-    }
-    const networkFee = 0.0004;
-    final conversionFeePercent = settlementAmount * 0.03;
-    final totalNaira = settlementAmount + conversionFeePercent;
-    final cryptoAmount =
-        (totalNaira / (rate * _selectedCryptoUsdPrice)) + networkFee;
-    return '${_roundDownCrypto(cryptoAmount)} $_selectedCrypto';
+    return 'Unavailable';
   }
 
   String? get _conversionFeeText {
@@ -209,12 +198,20 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   }
 
   String? get _processingFeeText {
-    final fee = _estimate?['processingFee'];
-    if (fee == null || fee.isEmpty) return null;
-    return '$fee $_selectedCrypto';
+    final fee = double.tryParse(_estimate?['processingFee'] ?? '');
+    if (fee == null || !fee.isFinite) return null;
+    return '₦${_formatFiat(fee)}';
   }
 
   void _queueEstimate() {
+    // Invalidate both the old quote and any in-flight response immediately.
+    _estimateRequestId++;
+    safeSetState(() {
+      _estimate = null;
+      _estimatedInputKey = null;
+      _estimateError = null;
+      _isEstimating = true;
+    });
     EasyDebounce.debounce(
       '_estimate',
       const Duration(milliseconds: 600),
@@ -229,27 +226,40 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     EasyDebounce.cancel('_estimate');
     safeSetState(() => _isRefreshingRate = true);
     try {
-      await Future.wait([
-        _loadLiveRate(),
-        _fetchEstimate(),
-      ]);
+      await _loadLiveRate();
+      if (mounted) await _fetchEstimate();
     } finally {
       if (mounted) safeSetState(() => _isRefreshingRate = false);
     }
   }
 
-  Future<void> _fetchEstimate() async {
+  String get _estimateInputKey =>
+      '$_enteredAmountInNaira|$_selectedInputCurrency|$_selectedCrypto|$_selectedNetworkForApi';
+
+  Future<bool> _fetchEstimate() async {
+    final requestId = ++_estimateRequestId;
+    final inputKey = _estimateInputKey;
     final amount = _enteredAmountInNaira;
-    if (amount <= 0) {
-      if (!mounted) return;
+    if (!amount.isFinite || amount <= 0) {
+      if (!mounted) return false;
       safeSetState(() {
         _estimate = null;
+        _estimatedInputKey = null;
+        _estimateError =
+            (_model.amountTextController?.text.trim().isEmpty ?? true)
+                ? null
+                : 'Enter a valid amount and wait for the live rate to load.';
         _isEstimating = false;
       });
-      return;
+      return false;
     }
 
-    safeSetState(() => _isEstimating = true);
+    safeSetState(() {
+      _isEstimating = true;
+      _estimate = null;
+      _estimatedInputKey = null;
+      _estimateError = null;
+    });
     try {
       final response = await http
           .post(
@@ -266,28 +276,28 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
             }),
           )
           .timeout(const Duration(seconds: 8));
-      final payload = response.body.isEmpty
-          ? <String, dynamic>{}
-          : jsonDecode(response.body) as Map<String, dynamic>;
-      final ok = response.statusCode >= 200 &&
-          response.statusCode < 300 &&
-          payload['ok'] != false;
-      final estimate = payload['estimate'];
-      if (!mounted) return;
+      final result = PaymentEstimateResult.fromResponse(
+          response.statusCode, response.body);
+      if (!mounted || requestId != _estimateRequestId) return false;
+      final inputUnchanged = inputKey == _estimateInputKey;
       safeSetState(() {
-        _estimate = ok && estimate is Map
-            ? estimate.map((key, value) => MapEntry('$key', '$value'))
-            : null;
+        _estimate = inputUnchanged ? result.estimate : null;
+        _estimatedInputKey = _estimate == null ? null : inputKey;
+        _estimateError = inputUnchanged
+            ? result.error
+            : 'The amount or rate changed. Please refresh the estimate.';
         _isEstimating = false;
       });
+      return _estimate != null;
     } catch (_) {
-      // Endpoint unavailable/unreachable — the client-side approximation
-      // in _cryptoAmountText keeps the screen usable either way.
-      if (!mounted) return;
+      if (!mounted || requestId != _estimateRequestId) return false;
       safeSetState(() {
         _estimate = null;
+        _estimatedInputKey = null;
+        _estimateError = PaymentEstimateResult.unavailable;
         _isEstimating = false;
       });
+      return false;
     }
   }
 
@@ -506,6 +516,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     SettleNumericKeypad.show(
       context,
       title: 'Amount',
+      submitLabel: 'Send',
       initialValue: _model.amountTextController?.text ?? '',
       allowDecimal: true,
       onChanged: (value) {
@@ -516,7 +527,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       onDone: (value) {
         _model.amountTextController?.text = value;
         safeSetState(() {});
-        _queueEstimate();
+        _submitTransaction();
       },
     );
   }
@@ -546,6 +557,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     SettleNumericKeypad.show(
       context,
       title: 'Account number',
+      submitLabel: 'Send',
+      requiredLength: 10,
       initialValue: _model.accNoTextController?.text ?? '',
       maxLength: 10,
       showPreview: showFallbackPreview,
@@ -555,7 +568,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       },
       onDone: (value) {
         _model.accNoTextController?.text = value;
-        _validateBankAccount();
+        _submitTransaction();
       },
     );
   }
@@ -737,8 +750,25 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   }
 
   Future<void> _submitTransaction() async {
+    if (_isSending || _isSent) return;
     if (_model.formKey.currentState == null ||
         !_model.formKey.currentState!.validate()) {
+      return;
+    }
+
+    final bankName = _model.bankNameValue;
+    final bankCode = bankName == null ? null : _bankCodes[bankName];
+    if (!_enteredAmountInNaira.isFinite ||
+        _enteredAmountInNaira <= 0 ||
+        bankCode == null ||
+        !RegExp(r'^[0-9]{10}$')
+            .hasMatch(_model.accNoTextController?.text.trim() ?? '')) {
+      showTopNotice(
+        context,
+        message:
+            'Enter an amount, select a bank and enter a 10 digit account number.',
+        type: TopNoticeType.caution,
+      );
       return;
     }
 
@@ -746,7 +776,21 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       _isSending = true;
       _isSent = false;
     });
-    await Future.delayed(const Duration(milliseconds: 550));
+    EasyDebounce.cancel('_estimate');
+    EasyDebounce.cancel('_model.accNoTextController.validate');
+    final estimated = await _fetchEstimate();
+    if (!mounted) return;
+    if (!estimated) {
+      safeSetState(() => _isSending = false);
+      showTopNotice(
+        context,
+        message: _estimateError ??
+            'Wait for a valid payment estimate before continuing.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
+    await _validateBankAccount();
     if (!mounted) return;
     safeSetState(() {
       _isSending = false;
@@ -754,8 +798,20 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
     });
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
-    final bankName = _model.bankNameValue;
-    final bankCode = bankName == null ? null : _bankCodes[bankName];
+    if (_estimate == null ||
+        _estimatedInputKey != _estimateInputKey ||
+        _isEstimating) {
+      safeSetState(() {
+        _isSending = false;
+        _isSent = false;
+      });
+      showTopNotice(
+        context,
+        message: 'The amount changed. Check the new estimate and try again.',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
     await context.pushNamed(
       ConfirmTransactionWidget.routeName,
       queryParameters: {
@@ -763,7 +819,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
         'rate': _formattedLiveRate,
         'beneficiaryName': _validatedAccountName ?? 'Beneficiary',
         'bankName': _validatedBankName ?? _model.bankNameValue ?? 'Bank',
-        'bankCode': bankCode ?? '',
+        'bankCode': bankCode,
         'accountNumber': _model.accNoTextController?.text ?? '',
         'cryptoAmount': _cryptoAmountText(),
         'crypto': _selectedCrypto,
@@ -824,6 +880,8 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
 
   @override
   void dispose() {
+    EasyDebounce.cancel('_estimate');
+    _estimateRequestId++;
     _rateRefreshTimer?.cancel();
     _accountNameTypingTimer?.cancel();
     _model.dispose();
@@ -839,12 +897,14 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
       body: Form(
         key: _model.formKey,
         autovalidateMode: AutovalidateMode.disabled,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
+        child: ListView(
+          padding: EdgeInsets.only(
+            bottom: 24.0 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
           children: [
             Container(
               width: double.infinity,
-              height: 220.0,
+              constraints: const BoxConstraints(minHeight: 220.0),
               decoration: BoxDecoration(
                 color: FlutterFlowTheme.of(context).secondaryBackground,
               ),
@@ -911,10 +971,9 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                       ],
                     ),
                   ),
-                  Expanded(
+                  Align(
                     child: Container(
                       width: MediaQuery.sizeOf(context).width * 0.8,
-                      height: 120.0,
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * 0.8,
                       ),
@@ -1137,8 +1196,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                               .bodyMedium
                                               .override(
                                                 font: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.normal,
+                                                  fontWeight: FontWeight.normal,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
                                                               context)
@@ -1150,8 +1208,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.normal,
                                                 fontStyle:
-                                                    FlutterFlowTheme.of(
-                                                            context)
+                                                    FlutterFlowTheme.of(context)
                                                         .bodyMedium
                                                         .fontStyle,
                                               ),
@@ -1199,6 +1256,21 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                   ),
                                 ),
                               )
+                            else if (_estimateError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10.0),
+                                child: Semantics(
+                                  liveRegion: true,
+                                  child: Text(
+                                    _estimateError!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFFC30000),
+                                      fontSize: 12.0,
+                                    ),
+                                  ),
+                                ),
+                              )
                             else if (_conversionFeeText != null ||
                                 _processingFeeText != null)
                               Padding(
@@ -1241,7 +1313,9 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
               ),
               child: Container(
                 width: double.infinity,
-                height: MediaQuery.sizeOf(context).height * 0.42,
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.sizeOf(context).height * 0.42,
+                ),
                 decoration: BoxDecoration(
                   color: FlutterFlowTheme.of(context).primaryBtnText,
                   borderRadius: BorderRadius.only(
@@ -1259,7 +1333,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                       ),
                       child: Container(
                         width: MediaQuery.sizeOf(context).width * 1.0,
-                        height: MediaQuery.sizeOf(context).height * 0.42,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(0.0),
                           shape: BoxShape.rectangle,

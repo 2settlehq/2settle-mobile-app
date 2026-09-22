@@ -1,4 +1,5 @@
 import 'dart:async';
+import '/components/keyboard_submit_bar.dart';
 
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
@@ -475,7 +476,23 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
     return _accountController.text.trim();
   }
 
+  Future<void> _submitClaimEntry() async {
+    if (_isClaiming) return;
+    safeSetState(() => _isClaiming = true);
+    _giftCheckDebounce?.cancel();
+    _validationDebounce?.cancel();
+    try {
+      await _checkGiftReference();
+      if (!mounted) return;
+      if (_receiveMode == 'Add account number') await _validateAccount();
+    } finally {
+      if (mounted) safeSetState(() => _isClaiming = false);
+    }
+    if (mounted) _openClaimConfirmation();
+  }
+
   void _openClaimConfirmation() {
+    if (_isClaiming) return;
     final bankCode = _claimBankCode;
     final accountNumber = _claimAccountNumber;
     final bankName = _receiveMode == 'Select from beneficiary'
@@ -808,6 +825,11 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
     final theme = FlutterFlowTheme.of(context);
     final canContinue = _giftValid && !_isClaiming;
     return Scaffold(
+      bottomNavigationBar: KeyboardSubmitBar(
+        text: 'Continue',
+        isLoading: _isClaiming || _isCheckingGift,
+        onPressed: _submitClaimEntry,
+      ),
       backgroundColor: const Color(0xFFF4F6FA),
       body: SafeArea(
         child: ListView(
@@ -892,6 +914,8 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
                         Expanded(
                           child: TextFormField(
                             controller: _giftIdController,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _submitClaimEntry(),
                             textCapitalization: TextCapitalization.characters,
                             inputFormatters: [
                               LengthLimitingTextInputFormatter(6),
@@ -1024,6 +1048,8 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
                       const SizedBox(height: 10.0),
                       TextFormField(
                         controller: _accountController,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submitClaimEntry(),
                         keyboardType: TextInputType.number,
                         maxLength: 10,
                         decoration: _inputDecoration('Account number').copyWith(
@@ -1048,7 +1074,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: InkWell(
-                        onTap: canContinue ? _openClaimConfirmation : null,
+                        onTap: canContinue ? _submitClaimEntry : null,
                         borderRadius: BorderRadius.circular(24.0),
                         child: Container(
                           padding: const EdgeInsetsDirectional.fromSTEB(

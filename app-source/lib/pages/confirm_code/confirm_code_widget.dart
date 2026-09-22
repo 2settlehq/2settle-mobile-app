@@ -69,6 +69,15 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
     }
 
     final code = _model.pinCodeController?.text ?? '';
+    final length = _isUnlockMode ? _passcodeLength : 6;
+    if (!RegExp('^[0-9]{$length}\$').hasMatch(code)) {
+      showTopNotice(
+        context,
+        message: 'Enter a $length digit code',
+        type: TopNoticeType.caution,
+      );
+      return;
+    }
 
     safeSetState(() {
       _isConfirming = true;
@@ -172,12 +181,15 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
   }
 
   void _openCodeKeypad() {
+    if (_isConfirming) return;
     final length = _isUnlockMode ? _passcodeLength : 6;
     SettleNumericKeypad.show(
       context,
       title: _isUnlockMode ? 'App passcode' : 'Confirm code',
       initialValue: _model.pinCodeController?.text ?? '',
       maxLength: length,
+      requiredLength: length,
+      submitLabel: 'Confirm',
       obscurePreview: _isUnlockMode,
       onChanged: (value) {
         _model.pinCodeController?.text = value;
@@ -186,6 +198,7 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
       onDone: (value) {
         _model.pinCodeController?.text = value;
         safeSetState(() {});
+        _confirmCode();
       },
     );
   }
@@ -205,7 +218,8 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
           automaticallyImplyLeading: false,
           title: Text(
             'Enter Pin Code Below',
-            style: FlutterFlowTheme.of(context).bodyMedium.override(fontFamily: 'Hornbill', 
+            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                  fontFamily: 'Hornbill',
                   font: TextStyle(
                     fontWeight:
                         FlutterFlowTheme.of(context).bodyMedium.fontWeight,
@@ -237,7 +251,8 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
                         : _isRecoveryMode
                             ? 'Confirm recovery code'
                             : 'Confirm your Code',
-                    style: FlutterFlowTheme.of(context).headlineSmall.override(fontFamily: 'Hornbill', 
+                    style: FlutterFlowTheme.of(context).headlineSmall.override(
+                          fontFamily: 'Hornbill',
                           font: TextStyle(
                             fontWeight: FlutterFlowTheme.of(context)
                                 .headlineSmall
@@ -266,7 +281,8 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
                               ? 'Enter the code sent to reset your pin.'
                               : 'Enter the code sent to your phone or email.',
                       textAlign: TextAlign.center,
-                      style: FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill', 
+                      style: FlutterFlowTheme.of(context).bodySmall.override(
+                            fontFamily: 'Hornbill',
                             font: TextStyle(
                               fontWeight: FontWeight.normal,
                               fontStyle: FlutterFlowTheme.of(context)
@@ -302,6 +318,8 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
                       errorTextSpace: 16.0,
                       showCursor: true,
                       keyboardType: TextInputType.none,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _confirmCode(),
                       onTap: _openCodeKeypad,
                       cursorColor: FlutterFlowTheme.of(context).primary,
                       obscureText: _isUnlockMode,
@@ -353,7 +371,8 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
                                 'Forgot pin?',
                                 style: FlutterFlowTheme.of(context)
                                     .bodySmall
-                                    .override(fontFamily: 'Hornbill', 
+                                    .override(
+                                      fontFamily: 'Hornbill',
                                       font: TextStyle(
                                         fontWeight: FontWeight.normal,
                                         fontStyle: FlutterFlowTheme.of(context)

@@ -1,5 +1,6 @@
 import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
+import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
 import '/data/ng_bank_codes.dart';
@@ -223,6 +224,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
     SettleNumericKeypad.show(
       context,
       title: 'Receive amount',
+      submitLabel: 'Create',
       initialValue: _amountController.text,
       allowDecimal: true,
       onChanged: (value) {
@@ -232,6 +234,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
       onDone: (value) {
         _amountController.text = value;
         safeSetState(() {});
+        _createRequest();
       },
     );
   }
@@ -303,6 +306,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   }
 
   Future<void> _createRequest() async {
+    if (_isCreating || _isCreated) return;
     if (_amountController.text.trim().isEmpty) {
       _showNoticeSnackBar('Enter amount to receive.');
       return;
@@ -521,6 +525,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
     var popupAccount = _accountController.text.trim();
     var popupAccountName = _inputAccountName;
     var validating = false;
+    var accountSubmitted = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -531,6 +536,24 @@ class _PayPageWidgetState extends State<PayPageWidget> {
         final theme = FlutterFlowTheme.of(context);
         return StatefulBuilder(
           builder: (context, setModalState) {
+            void useAccount() {
+              if (accountSubmitted) return;
+              if (validating ||
+                  popupAccount.length != 10 ||
+                  (popupAccountName ?? '').isEmpty) {
+                _showNoticeSnackBar(
+                    'Validate the bank account before using it.');
+                return;
+              }
+              accountSubmitted = true;
+              safeSetState(() {
+                _inputBankName = popupBank;
+                _inputAccountName = popupAccountName;
+                _accountController.text = popupAccount;
+              });
+              Navigator.of(context).pop();
+            }
+
             Future<void> validate() async {
               if (popupAccount.length != 10) {
                 setModalState(() => popupAccountName = null);
@@ -632,6 +655,8 @@ class _PayPageWidgetState extends State<PayPageWidget> {
                     TextFormField(
                       initialValue: popupAccount,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => useAccount(),
                       maxLength: 10,
                       cursorColor: _blue,
                       decoration: _inputDecoration('Account number').copyWith(
@@ -702,21 +727,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
                         iconBoxSize: 36.0,
                         iconSize: 19.0,
                         fontSize: 13.0,
-                        onPressed: () {
-                          if (popupAccount.length != 10 ||
-                              (popupAccountName ?? '').isEmpty) {
-                            _showNoticeSnackBar(
-                              'Validate the bank account before using it.',
-                            );
-                            return;
-                          }
-                          safeSetState(() {
-                            _inputBankName = popupBank;
-                            _inputAccountName = popupAccountName;
-                            _accountController.text = popupAccount;
-                          });
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: useAccount,
                       ),
                     ),
                   ],
@@ -1007,6 +1018,12 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
+      bottomNavigationBar: KeyboardSubmitBar(
+        text: 'Create',
+        isLoading: _isCreating,
+        isDone: _isCreated,
+        onPressed: _createRequest,
+      ),
       key: scaffoldKey,
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
@@ -1166,6 +1183,8 @@ class _PayPageWidgetState extends State<PayPageWidget> {
             ),
             TextFormField(
               controller: _descriptionController,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _createRequest(),
               decoration: _inputDecoration('Payment description'),
               style: theme.bodyMedium.override(
                 font: TextStyle(

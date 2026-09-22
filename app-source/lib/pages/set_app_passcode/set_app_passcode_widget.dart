@@ -117,7 +117,9 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
     if (!mounted) {
       return;
     }
-    final pin = _model.pinCodeController?.text ?? '';
+    final pin = _isChangeMode
+        ? _newPinController.text
+        : (_model.pinCodeController?.text ?? '');
     if (pin.length != _pinLength) {
       safeSetState(() {
         _isSettingPin = false;
@@ -236,7 +238,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
             Text(
               'Pin set successfully',
               textAlign: TextAlign.center,
-              style: FlutterFlowTheme.of(context).titleSmall.override(fontFamily: 'Hornbill', 
+              style: FlutterFlowTheme.of(context).titleSmall.override(
+                    fontFamily: 'Hornbill',
                     font: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontStyle:
@@ -275,11 +278,15 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
   }
 
   void _openPasscodeKeypad() {
+    if (_isSettingPin) return;
+    FocusScope.of(context).unfocus();
     SettleNumericKeypad.show(
       context,
       title: _isResetMode ? 'Reset app passcode' : 'Set app passcode',
       initialValue: _model.pinCodeController?.text ?? '',
       maxLength: _pinLength,
+      requiredLength: _pinLength,
+      submitLabel: 'Set Pin',
       obscurePreview: true,
       onChanged: (value) {
         _model.pinCodeController?.text = value;
@@ -288,6 +295,7 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
       onDone: (value) {
         _model.pinCodeController?.text = value;
         safeSetState(() {});
+        _setPin();
       },
     );
   }
@@ -296,11 +304,15 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
     required String title,
     required TextEditingController controller,
   }) {
+    if (_isSettingPin) return;
+    final isConfirmation = controller == _confirmPinController;
     SettleNumericKeypad.show(
       context,
       title: title,
       initialValue: controller.text,
       maxLength: _pinLength,
+      requiredLength: _pinLength,
+      submitLabel: isConfirmation ? 'Save Pin' : null,
       obscurePreview: true,
       onChanged: (value) {
         controller.text = value;
@@ -309,6 +321,7 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
       onDone: (value) {
         controller.text = value;
         safeSetState(() {});
+        if (isConfirmation) _setPin();
       },
     );
   }
@@ -327,7 +340,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
             padding: const EdgeInsetsDirectional.only(start: 18.0, bottom: 8.0),
             child: Text(
               label,
-              style: FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill', 
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    fontFamily: 'Hornbill',
                     font: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontStyle:
@@ -358,6 +372,10 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
             errorTextSpace: 0.0,
             showCursor: true,
             keyboardType: TextInputType.none,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (controller == _confirmPinController) _setPin();
+            },
             onTap: () => _openChangePinKeypad(
               title: label,
               controller: controller,
@@ -408,7 +426,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
             _isChangeMode
                 ? 'Change App Passcode'
                 : (_isResetMode ? 'Reset App Passcode' : 'Set App Passcode'),
-            style: FlutterFlowTheme.of(context).bodyMedium.override(fontFamily: 'Hornbill', 
+            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                  fontFamily: 'Hornbill',
                   font: TextStyle(
                     fontWeight:
                         FlutterFlowTheme.of(context).bodyMedium.fontWeight,
@@ -424,9 +443,10 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
           centerTitle: true,
           elevation: 0.0,
         ),
-        body: Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        body: ListView(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewPaddingOf(context).bottom,
+          ),
           children: [
             Padding(
               padding:
@@ -439,7 +459,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
                         : (_isResetMode
                             ? 'Create a New Pin'
                             : 'Create your App Passcode'),
-                    style: FlutterFlowTheme.of(context).headlineSmall.override(fontFamily: 'Hornbill', 
+                    style: FlutterFlowTheme.of(context).headlineSmall.override(
+                          fontFamily: 'Hornbill',
                           font: TextStyle(
                             fontWeight: FlutterFlowTheme.of(context)
                                 .headlineSmall
@@ -464,7 +485,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
                     child: Text(
                       'Set a $_pinLength digit passcode for quick access.',
                       textAlign: TextAlign.center,
-                      style: FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill', 
+                      style: FlutterFlowTheme.of(context).bodySmall.override(
+                            fontFamily: 'Hornbill',
                             font: TextStyle(
                               fontWeight: FontWeight.normal,
                               fontStyle: FlutterFlowTheme.of(context)
@@ -509,22 +531,26 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
                         decoration: InputDecoration(
                           labelText: 'Username',
                           hintText: 'Choose a username',
-                          labelStyle:
-                              FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill',
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    fontSize: 11.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                          hintStyle:
-                              FlutterFlowTheme.of(context).bodySmall.override(fontFamily: 'Hornbill',
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    fontSize: 11.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                          labelStyle: FlutterFlowTheme.of(context)
+                              .bodySmall
+                              .override(
+                                fontFamily: 'Hornbill',
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
+                                fontSize: 11.0,
+                                letterSpacing: 0.0,
+                                fontWeight: FontWeight.w500,
+                              ),
+                          hintStyle: FlutterFlowTheme.of(context)
+                              .bodySmall
+                              .override(
+                                fontFamily: 'Hornbill',
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
+                                fontSize: 11.0,
+                                letterSpacing: 0.0,
+                                fontWeight: FontWeight.w500,
+                              ),
                           filled: true,
                           fillColor:
                               FlutterFlowTheme.of(context).secondaryBackground,
@@ -546,7 +572,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                         ),
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(fontFamily: 'Hornbill',
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                              fontFamily: 'Hornbill',
                               color: FlutterFlowTheme.of(context).primaryText,
                               fontSize: 14.0,
                               letterSpacing: 0.0,
@@ -600,6 +627,8 @@ class _SetAppPasscodeWidgetState extends State<SetAppPasscodeWidget> {
                         errorTextSpace: 16.0,
                         showCursor: true,
                         keyboardType: TextInputType.none,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _setPin(),
                         onTap: _openPasscodeKeypad,
                         cursorColor: FlutterFlowTheme.of(context).primary,
                         obscureText: true,
