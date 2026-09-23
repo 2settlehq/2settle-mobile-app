@@ -270,7 +270,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
     try {
       final response = await http.get(
         Uri.parse(
-          '$_giftClaimBaseUrl/${Uri.encodeComponent(reference)}?ts=${DateTime.now().millisecondsSinceEpoch}',
+          '$_giftClaimBaseUrl/${Uri.encodeComponent(reference)}/check?ts=${DateTime.now().millisecondsSinceEpoch}',
         ),
         headers: const {'accept': 'application/json'},
       ).timeout(const Duration(seconds: 8));
@@ -299,29 +299,31 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
             'institutionName',
           ]) ??
           '';
-      final isConfirmed = ok && (status == 'confirmed' || status == 'created');
+      final isConfirmed = ok && payload['valid'] == true;
       final isPending = ok && status == 'pending';
-      final isSettled = ok && status == 'settled';
+      final isClaimed = ok && payload['claimed'] == true;
       final isCancelled = ok && (status == 'cancelled' || status == 'canceled');
       if (!mounted) return;
       safeSetState(() {
         _giftValid = isConfirmed;
         _giftAmount = amount;
-        _giftStatusCode = status;
+        _giftStatusCode = isClaimed ? 'claimed' : status;
         _claimedBankName = claimedBank;
         _giftCheckMessage = isConfirmed
             ? 'Gift ID is valid.'
             : isPending
                 ? 'Gift ID is valid but not funded yet.'
-                : isSettled
+                : isClaimed
                     ? 'This ID has been claimed${claimedBank.isEmpty ? '' : ' to $claimedBank'}.'
                     : isCancelled
                         ? 'This Gift ID has been cancelled.'
                         : ok
-                            ? status.isEmpty
-                                ? 'Gift ID could not be claimed.'
-                                : 'Gift ID is $status.'
-                            : 'Gift ID not found.';
+                            ? payload['exists'] == false
+                                ? 'Gift ID not found.'
+                                : status.isEmpty
+                                    ? 'Gift ID could not be claimed.'
+                                    : 'Gift ID is $status.'
+                            : 'Gift ID could not be verified.';
         _isCheckingGift = false;
       });
       if ((isConfirmed || isPending) && amount.isNotEmpty) {
@@ -650,7 +652,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
 
   Widget _giftStatus() {
     final theme = FlutterFlowTheme.of(context);
-    final isSettled = _giftStatusCode == 'settled';
+    final isClaimed = _giftStatusCode == 'claimed';
     final isPending = _giftStatusCode == 'pending';
     final isCancelled =
         _giftStatusCode == 'cancelled' || _giftStatusCode == 'canceled';
@@ -714,7 +716,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
       );
     }
 
-    if (isSettled) {
+    if (isClaimed) {
       return Row(
         children: [
           const Icon(Icons.info_outline_rounded, color: _red, size: 17.0),
