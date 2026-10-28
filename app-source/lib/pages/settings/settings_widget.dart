@@ -32,6 +32,7 @@ class _SettingsWidgetState extends State<SettingsWidget>
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   static const _blue = Color(0xFF4472C4);
+  static const _red = Color(0xFFC30000);
   String _displayName = 'Sirfitech';
   String _mobileId = 'Loading...';
   String _userIdDisplay = '';
@@ -147,6 +148,43 @@ class _SettingsWidgetState extends State<SettingsWidget>
       _contactValue = identifier;
       _contactIcon = channel == 'email' ? Icons.email_rounded : Icons.phone_rounded;
     });
+  }
+
+  Widget _deleteAccountButton() {
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(18.0, 28.0, 18.0, 24.0),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18.0),
+        onTap: () => showTopNotice(
+          context,
+          message: 'Account deletion is coming soon. We\'re working on it.',
+        ),
+        child: Container(
+          width: double.infinity,
+          height: 52.0,
+          decoration: BoxDecoration(
+            color: _red.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(18.0),
+            border: Border.all(color: _red.withValues(alpha: 0.45)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.delete_outline_rounded, color: _red, size: 20.0),
+              const SizedBox(width: 8.0),
+              Text(
+                'Delete Account',
+                style: GoogleFonts.inter(
+                  color: _red,
+                  fontSize: 13.0,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _section({
@@ -659,6 +697,7 @@ class _SettingsWidgetState extends State<SettingsWidget>
                   ),
                 ],
               ),
+              _deleteAccountButton(),
             ],
           ),
         ),
