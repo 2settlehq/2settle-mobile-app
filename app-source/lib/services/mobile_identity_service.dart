@@ -57,6 +57,20 @@ class MobileIdentityService {
     return (channel: channel, identifier: identifier);
   }
 
+  /// The channel/identifier the current session actually logged in with, or
+  /// `null` if none is stored. Unlike [getLoginIdentifier] this never falls
+  /// back to [fallbackPhone], so it's safe to display.
+  static Future<({String channel, String identifier})?>
+      getSavedLoginIdentifier() async {
+    final prefs = await SharedPreferences.getInstance();
+    final channel = prefs.getString(loginChannelKey);
+    final identifier = prefs.getString(loginIdentifierKey);
+    if (channel == null || identifier == null || identifier.isEmpty) {
+      return null;
+    }
+    return (channel: channel, identifier: identifier);
+  }
+
   /// Clears the previous account's phone/login identifier on sign-out.
   /// Deliberately keeps [mobileIdKey] — that's a stable per-device
   /// identifier, not account-identifying data, and losing it would change

@@ -2,6 +2,7 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/mobile_identity_service.dart';
 import '/services/pin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,12 +23,14 @@ class _SecurityWidgetState extends State<SecurityWidget> {
   late SecurityModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   int _pinLength = 6;
+  ({String channel, String identifier})? _login;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => SecurityModel());
     _loadPinLength();
+    _loadLoginMethod();
   }
 
   @override
@@ -50,66 +53,23 @@ class _SecurityWidgetState extends State<SecurityWidget> {
     safeSetState(() => _pinLength = length);
   }
 
-  Future<void> _showLinkStatus(String label) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18.0)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding:
-                const EdgeInsetsDirectional.fromSTEB(20.0, 18.0, 20.0, 24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Link $label',
-                  style: FlutterFlowTheme.of(context).headlineSmall.override(
-                        font: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontStyle: FlutterFlowTheme.of(context)
-                              .headlineSmall
-                              .fontStyle,
-                        ),
-                        color: FlutterFlowTheme.of(context).primary,
-                        letterSpacing: 0.0,
-                        fontWeight: FontWeight.w700,
-                        fontStyle: FlutterFlowTheme.of(context)
-                            .headlineSmall
-                            .fontStyle,
-                      ),
-                ),
-                const SizedBox(height: 10.0),
-                Text(
-                  'This will let you connect to 2Settle with $label after it has been verified.',
-                  style: FlutterFlowTheme.of(context).bodySmall.override(
-                        font: TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                        ),
-                        letterSpacing: 0.0,
-                        fontWeight: FontWeight.normal,
-                        fontStyle:
-                            FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                      ),
-                ),
-                const SizedBox(height: 18.0),
-                _SecurityTile(
-                  icon: Icons.add_link_rounded,
-                  title: 'Start linking',
-                  subtitle: 'Verification flow will be connected next.',
-                  onTap: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Future<void> _loadLoginMethod() async {
+    final login = await MobileIdentityService.getSavedLoginIdentifier();
+    if (!mounted) return;
+    safeSetState(() => _login = login);
+  }
+
+  Widget _buildLinkedLoginTile() {
+    final login = _login;
+    if (login == null) {
+      return const SizedBox.shrink();
+    }
+    final isEmail = login.channel == 'email';
+    return _SecurityTile(
+      icon: isEmail ? Icons.mail_rounded : Icons.phone_iphone_rounded,
+      title: isEmail ? 'Email' : 'Phone number',
+      subtitle: isEmail ? login.identifier : '+${login.identifier}',
+      trailingText: 'Linked',
     );
   }
 
@@ -226,7 +186,7 @@ class _SecurityWidgetState extends State<SecurityWidget> {
             ),
             const SizedBox(height: 22.0),
             Text(
-              'Link Account',
+              'Linked Account',
               style: FlutterFlowTheme.of(context).titleSmall.override(
                     font: TextStyle(
                       fontWeight: FontWeight.w600,
@@ -241,31 +201,7 @@ class _SecurityWidgetState extends State<SecurityWidget> {
                   ),
             ),
             const SizedBox(height: 10.0),
-            _SecurityTile(
-              icon: Icons.phone_iphone_rounded,
-              title: 'Phone number',
-              subtitle: 'Current connection method.',
-              trailingText: 'Linked',
-              onTap: () => _showLinkStatus('phone number'),
-            ),
-            _SecurityTile(
-              icon: Icons.account_balance_wallet_rounded,
-              title: 'Wallet address',
-              subtitle: 'Connect later with your wallet.',
-              onTap: () => _showLinkStatus('wallet address'),
-            ),
-            _SecurityTile(
-              icon: Icons.mail_rounded,
-              title: 'Email',
-              subtitle: 'Connect later with your email.',
-              onTap: () => _showLinkStatus('email'),
-            ),
-            _SecurityTile(
-              icon: Icons.g_mobiledata_rounded,
-              title: 'Google',
-              subtitle: 'Connect later with Google.',
-              onTap: () => _showLinkStatus('Google'),
-            ),
+            _buildLinkedLoginTile(),
           ],
         ),
       ),
@@ -278,14 +214,14 @@ class _SecurityTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
     this.trailingText,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final String? trailingText;
 
   @override

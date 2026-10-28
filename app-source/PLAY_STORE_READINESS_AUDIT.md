@@ -1,3 +1,5 @@
+> Historical audit: findings below describe the September 15 review and earlier material. For current verified code status, September 25 test results, and remaining release work, use [PLAY_STORE_IMPLEMENTATION_PLAN.md](PLAY_STORE_IMPLEMENTATION_PLAN.md). Several findings below have since been fixed or changed.
+
 # 2Settle Play Store readiness audit (v2 — independent re-audit)
 
 Audit date: September 15, 2026. This supersedes the September 14–15, 2026 audit below the `---` divider at the end of this file, which is retained for traceability but should not be treated as current.
