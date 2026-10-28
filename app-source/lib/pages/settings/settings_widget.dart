@@ -633,15 +633,29 @@ class _SettingsWidgetState extends State<SettingsWidget>
                   _settingsRow(
                     icon: Icons.attach_money_rounded,
                     title: 'Currency Options',
+                    onTap: () => showTopNotice(
+                      context,
+                      message:
+                          'Currency options are coming soon. We\'re working on it.',
+                    ),
                   ),
                   _settingsRow(
                     icon: Icons.help_outline_rounded,
                     title: 'Support',
+                    onTap: () => showTopNotice(
+                      context,
+                      message: 'Support is coming soon. We\'re working on it.',
+                    ),
                   ),
                   _settingsRow(
                     icon: Icons.ios_share_rounded,
                     title: 'Invite Friends',
                     showDivider: false,
+                    onTap: () => showTopNotice(
+                      context,
+                      message:
+                          'Invite Friends is coming soon. We\'re working on it.',
+                    ),
                   ),
                 ],
               ),
