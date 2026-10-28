@@ -4,7 +4,6 @@ import '/components/settle_numeric_keypad.dart';
 import '/components/status_action_button.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
-import '/data/ng_bank_codes.dart';
 import '/data/payment_networks.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
@@ -42,7 +41,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
   static const _estimateUrl = ApiConfig.paymentsEstimateUrl;
-  static const _fallbackBankCodes = ngBankCodes;
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
   Timer? _rateRefreshTimer;
   double? _liveRate;
@@ -63,7 +61,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   bool _isLoadingBanks = false;
   bool _isSending = false;
   bool _isSent = false;
-  late Map<String, String> _bankCodes;
+  Map<String, String> _bankCodes = {};
   final List<_SavedBeneficiary> _savedBeneficiaries = [];
   Timer? _accountNameTypingTimer;
 
@@ -452,13 +450,17 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
 
       if (!mounted || next.isEmpty) return;
       _updateForm(() {
-        _bankCodes = {
-          ..._fallbackBankCodes,
-          ...next,
-        };
+        _bankCodes = next;
+        // Default to the first bank unless one was already picked.
+        if (_model.bankNameValue == null) {
+          _model.bankNameValue = next.keys.first;
+          _model.bankNameValueController ??= FormFieldController<String>(null);
+          _model.bankNameValueController!.value = _model.bankNameValue;
+          _validatedBankName = _model.bankNameValue;
+        }
       });
     } catch (_) {
-      // Keep fallback banks available offline.
+      // Bank list stays empty until the endpoint is reachable.
     } finally {
       if (mounted) _updateForm(() => _isLoadingBanks = false);
     }
@@ -887,7 +889,6 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
   void initState() {
     super.initState();
     _model = createModel(context, () => MainTransactionModel());
-    _bankCodes = Map<String, String>.from(_fallbackBankCodes);
 
     _model.amountTextController ??= TextEditingController();
     _model.amountFocusNode ??= FocusNode();

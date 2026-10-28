@@ -5,7 +5,6 @@ import '/components/status_action_button.dart';
 import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
-import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -37,7 +36,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   static const _transactionStorageKey = '2settle_initiated_transactions';
   static const _beneficiaryStorageKey = '2settle_saved_beneficiaries';
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
-  static const _bankCodes = ngBankCodes;
+  static const _banksUrl = ApiConfig.banksListUrl;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final _amountController = TextEditingController();
@@ -52,6 +51,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   String _settlementMode = 'Default account';
   String _network = 'TRC20';
   String? _inputBankName;
+  Map<String, String> _bankCodes = {};
   String? _inputAccountName;
   _SavedBeneficiary? _selectedBeneficiary;
   bool _payerCanEdit = false;
@@ -89,6 +89,36 @@ class _PayPageWidgetState extends State<PayPageWidget> {
     _model = createModel(context, () => PayPageModel());
     _loadRequests();
     _loadBeneficiaries();
+    _loadBanks();
+  }
+
+  Future<void> _loadBanks() async {
+    try {
+      final response = await http.get(
+        Uri.parse(_banksUrl),
+        headers: const {'accept': 'application/json'},
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode < 200 || response.statusCode >= 300) return;
+      final payload = jsonDecode(response.body);
+      final data = payload is Map ? payload['data'] : null;
+      if (data is! List) return;
+      final next = <String, String>{};
+      for (final item in data) {
+        if (item is! Map) continue;
+        final name = item['name']?.toString();
+        final code = item['code']?.toString();
+        if (name != null &&
+            code != null &&
+            name.isNotEmpty &&
+            code.isNotEmpty) {
+          next[name] = code;
+        }
+      }
+      if (!mounted || next.isEmpty) return;
+      safeSetState(() => _bankCodes = next);
+    } catch (_) {
+      // Bank list stays empty until the endpoint is reachable.
+    }
   }
 
   @override
@@ -587,6 +617,16 @@ class _PayPageWidgetState extends State<PayPageWidget> {
   }
 
   Future<void> _openInputAccountPopup() async {
+    if (_bankCodes.isEmpty) {
+      showTopNotice(
+        context,
+        message: 'Banks are still loading. Try again in a moment.',
+        type: TopNoticeType.caution,
+      );
+      _loadBanks();
+      return;
+    }
+    // Default to the first loaded bank unless the user already picked one.
     var popupBank = _inputBankName ?? _bankCodes.keys.first;
     var popupAccount = _accountController.text.trim();
     var popupAccountName = _inputAccountName;

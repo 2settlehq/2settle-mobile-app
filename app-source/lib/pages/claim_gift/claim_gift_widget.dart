@@ -3,7 +3,6 @@ import '/components/keyboard_submit_bar.dart';
 
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
-import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -44,7 +43,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
   Timer? _giftCheckDebounce;
   Timer? _giftAmountTypingTimer;
 
-  Map<String, String> _bankCodes = Map<String, String>.from(ngBankCodes);
+  Map<String, String> _bankCodes = {};
   String _receiveMode = 'Add account number';
   String? _selectedBank;
   String? _validatedAccountName;
@@ -131,9 +130,16 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
         }
       }
       if (!mounted || next.isEmpty) return;
-      safeSetState(() => _bankCodes = {...ngBankCodes, ...next});
+      safeSetState(() {
+        _bankCodes = next;
+        // Default to the first bank unless the user already picked one.
+        if (_selectedBank == null) {
+          _selectedBank = next.keys.first;
+          _bankFieldController?.value = _selectedBank;
+        }
+      });
     } catch (_) {
-      // Fallback bank list remains available.
+      // Bank list stays empty until the endpoint is reachable.
     } finally {
       if (mounted) safeSetState(() => _isLoadingBanks = false);
     }

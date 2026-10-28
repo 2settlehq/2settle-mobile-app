@@ -5,7 +5,6 @@ import '/components/status_action_button.dart';
 import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
-import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -53,7 +52,7 @@ class _ReceiveAccountSetupScaffoldState
   Timer? _validationDebounce;
   Timer? _typingTimer;
 
-  Map<String, String> _bankCodes = Map<String, String>.from(ngBankCodes);
+  Map<String, String> _bankCodes = {};
   List<_ReceiveDestination> _items = [];
   String? _selectedBank;
   String? _validatedAccountName;
@@ -185,9 +184,16 @@ class _ReceiveAccountSetupScaffoldState
         }
       }
       if (!mounted || next.isEmpty) return;
-      safeSetState(() => _bankCodes = {...ngBankCodes, ...next});
+      safeSetState(() {
+        _bankCodes = next;
+        // Default to the first bank unless the user already picked one.
+        if (_selectedBank == null) {
+          _selectedBank = next.keys.first;
+          _bankFieldController?.value = _selectedBank;
+        }
+      });
     } catch (_) {
-      // Fallback bank list stays available.
+      // Bank list stays empty until the endpoint is reachable.
     } finally {
       if (mounted) safeSetState(() => _isLoadingBanks = false);
     }
@@ -369,8 +375,8 @@ class _ReceiveAccountSetupScaffoldState
       _labelController.clear();
       _bankController.clear();
       _accountController.clear();
-      _selectedBank = null;
-      _bankFieldController?.value = null;
+      _selectedBank = _banks.firstOrNull;
+      _bankFieldController?.value = _selectedBank;
       _validatedAccountName = null;
       _typedAccountName = '';
       _validationMessage = null;

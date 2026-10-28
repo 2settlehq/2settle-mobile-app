@@ -5,7 +5,6 @@ import '/components/status_action_button.dart';
 import '/components/keyboard_submit_bar.dart';
 import '/components/top_notice.dart';
 import '/config/api_config.dart';
-import '/data/ng_bank_codes.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -60,19 +59,17 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
   bool _isValidatingAccount = false;
   bool _isSaving = false;
   bool _isSaved = false;
-  late Map<String, String> _bankCodes;
+  Map<String, String> _bankCodes = {};
 
   static const _blue = Color(0xFF4472C4);
   static const _storageKey = '2settle_saved_beneficiaries';
   static const _banksUrl = ApiConfig.banksListUrl;
   static const _validateBankUrl = ApiConfig.banksResolveUrl;
-  static const _fallbackBankCodes = ngBankCodes;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => AccountDetailsModel());
-    _bankCodes = Map<String, String>.from(_fallbackBankCodes);
     _loadBeneficiaries();
     _loadBanks();
     _accountNumberController.addListener(_queueAccountValidation);
@@ -162,7 +159,8 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
       );
       _beneficiaryNameController.clear();
       _accountNumberController.clear();
-      _selectedBank = null;
+      _selectedBank = _banks.firstOrNull;
+      _model.bankNameValueController?.value = _selectedBank;
       _validatedBankName = null;
       _validatedAccountName = null;
       _typedAccountName = '';
@@ -282,13 +280,15 @@ class _AccountDetailsWidgetState extends State<AccountDetailsWidget> {
 
       if (!mounted || next.isEmpty) return;
       safeSetState(() {
-        _bankCodes = {
-          ..._fallbackBankCodes,
-          ...next,
-        };
+        _bankCodes = next;
+        // Default to the first bank unless the user already picked one.
+        if (_selectedBank == null) {
+          _selectedBank = next.keys.first;
+          _model.bankNameValueController?.value = _selectedBank;
+        }
       });
     } catch (_) {
-      // Keep fallback bank list available.
+      // Bank list stays empty until the endpoint is reachable.
     } finally {
       if (mounted) safeSetState(() => _isLoadingBanks = false);
     }
