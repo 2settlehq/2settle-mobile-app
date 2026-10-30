@@ -235,7 +235,7 @@ Status: ${_statusLabel.toUpperCase()}
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(18, 28, 18, 28),
@@ -246,7 +246,7 @@ Status: ${_statusLabel.toUpperCase()}
                 width: double.infinity,
                 padding: const EdgeInsetsDirectional.fromSTEB(18, 24, 18, 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: _blue.withValues(alpha: .12)),
                   boxShadow: const [

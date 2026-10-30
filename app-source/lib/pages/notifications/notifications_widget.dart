@@ -184,12 +184,12 @@ class _NotificationsWidgetState extends State<NotificationsWidget>
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(16.0),
           border: Border.all(
             color: unread
                 ? toneColor.withValues(alpha: 0.34)
-                : const Color(0xFFE8EAF0),
+                : FlutterFlowTheme.of(context).borderSubtle,
           ),
           boxShadow: const [
             BoxShadow(
@@ -298,7 +298,7 @@ class _NotificationsWidgetState extends State<NotificationsWidget>
             padding:
                 const EdgeInsetsDirectional.fromSTEB(16.0, 15.0, 16.0, 15.0),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FlutterFlowTheme.of(context).surface,
               borderRadius: BorderRadius.circular(20.0),
               boxShadow: const [
                 BoxShadow(
@@ -376,9 +376,9 @@ class _NotificationsWidgetState extends State<NotificationsWidget>
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
           borderColor: Colors.transparent,
@@ -423,7 +423,7 @@ class _NotificationsWidgetState extends State<NotificationsWidget>
                       18.0, 8.0, 18.0, 0.0),
                   padding: const EdgeInsets.all(4.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: FlutterFlowTheme.of(context).surface,
                     borderRadius: BorderRadius.circular(14.0),
                   ),
                   child: TabBar(

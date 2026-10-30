@@ -29,7 +29,7 @@ class AccountWidget extends StatelessWidget {
           border: showDivider
               ? Border(
                   bottom: BorderSide(
-                    color: const Color(0xFFE3E8F0).withValues(alpha: 0.82),
+                    color: FlutterFlowTheme.of(context).borderSubtle.withValues(alpha: 0.82),
                     width: 0.8,
                   ),
                 )
@@ -94,7 +94,7 @@ class AccountWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsetsDirectional.only(bottom: 24.0),
@@ -139,7 +139,7 @@ class AccountWidget extends StatelessWidget {
                   const EdgeInsetsDirectional.fromSTEB(18.0, 14.0, 18.0, 0.0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF3F8),
+                  color: FlutterFlowTheme.of(context).surfaceMuted,
                   borderRadius: BorderRadius.circular(16.0),
                   boxShadow: const [
                     BoxShadow(

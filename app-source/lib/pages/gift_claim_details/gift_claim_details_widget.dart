@@ -490,7 +490,7 @@ ${_status == 'settled' && _settlementDuration.isNotEmpty ? 'Completed in: $_sett
               width: 62.0,
               height: 62.0,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
+                color: FlutterFlowTheme.of(context).surface.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.deblur_rounded,
@@ -540,7 +540,7 @@ ${_status == 'settled' && _settlementDuration.isNotEmpty ? 'Completed in: $_sett
             width: 62.0,
             height: 62.0,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: FlutterFlowTheme.of(context).surface.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
             child: isSettled
@@ -701,9 +701,9 @@ ${_status == 'settled' && _settlementDuration.isNotEmpty ? 'Completed in: $_sett
       width: double.infinity,
       padding: const EdgeInsetsDirectional.fromSTEB(14.0, 12.0, 14.0, 12.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FlutterFlowTheme.of(context).surface,
         borderRadius: BorderRadius.circular(18.0),
-        border: Border.all(color: const Color(0xFFE5EAF1)),
+        border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
       ),
       child: Column(
         children: [
@@ -824,7 +824,7 @@ ${_status == 'settled' && _settlementDuration.isNotEmpty ? 'Completed in: $_sett
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsetsDirectional.only(bottom: 28.0),
@@ -892,9 +892,9 @@ ${_status == 'settled' && _settlementDuration.isNotEmpty ? 'Completed in: $_sett
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     16.0, 14.0, 16.0, 14.0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.circular(18.0),
-                  border: Border.all(color: const Color(0xFFE5EAF1)),
+                  border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
                 ),
                 child: Column(
                   children: [

@@ -140,7 +140,7 @@ class _CardDetailsWidgetState extends State<CardDetailsWidget> {
       alignment: Alignment.centerLeft,
       padding: const EdgeInsetsDirectional.fromSTEB(15.0, 0.0, 15.0, 0.0),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.84),
+        color: FlutterFlowTheme.of(context).surface.withValues(alpha: 0.84),
         borderRadius: BorderRadius.circular(14.0),
       ),
       child: Row(
@@ -178,9 +178,9 @@ class _CardDetailsWidgetState extends State<CardDetailsWidget> {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
           borderColor: Colors.transparent,

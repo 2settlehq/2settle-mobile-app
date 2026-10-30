@@ -102,7 +102,7 @@ Thank you for using 2Settle.
             padding:
                 const EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 16.0),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F7F7),
+              color: FlutterFlowTheme.of(context).surfaceMuted,
               borderRadius: BorderRadius.circular(22.0),
             ),
             child: SingleChildScrollView(

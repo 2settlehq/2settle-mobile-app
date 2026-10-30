@@ -244,7 +244,7 @@ class _ReceiveRequestDetailsWidgetState
       width: 32.0,
       height: 32.0,
       decoration: BoxDecoration(
-        color: active ? _blue : const Color(0xFFE7ECF3),
+        color: active ? _blue : FlutterFlowTheme.of(context).borderSubtle,
         shape: BoxShape.circle,
         boxShadow: active
             ? [
@@ -320,7 +320,7 @@ class _ReceiveRequestDetailsWidgetState
         height: 3.0,
         margin: const EdgeInsetsDirectional.only(bottom: 20.0),
         decoration: BoxDecoration(
-          color: active ? _blue : const Color(0xFFE7ECF3),
+          color: active ? _blue : FlutterFlowTheme.of(context).borderSubtle,
           borderRadius: BorderRadius.circular(4.0),
         ),
       ),
@@ -339,9 +339,9 @@ class _ReceiveRequestDetailsWidgetState
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(10.0, 9.0, 10.0, 9.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(14.0),
-          border: Border.all(color: const Color(0xFFE7ECF3)),
+          border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -479,9 +479,9 @@ class _ReceiveRequestDetailsWidgetState
     final theme = FlutterFlowTheme.of(context);
     final request = _request;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         automaticallyImplyLeading: false,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
@@ -528,9 +528,9 @@ class _ReceiveRequestDetailsWidgetState
                         padding: const EdgeInsetsDirectional.fromSTEB(
                             16.0, 16.0, 16.0, 16.0),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FlutterFlowTheme.of(context).surface,
                           borderRadius: BorderRadius.circular(18.0),
-                          border: Border.all(color: const Color(0xFFE7ECF3)),
+                          border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
                         ),
                         child: Column(
                           children: [
@@ -623,9 +623,9 @@ class _ReceiveRequestDetailsWidgetState
                         padding: const EdgeInsetsDirectional.fromSTEB(
                             14.0, 12.0, 14.0, 12.0),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: FlutterFlowTheme.of(context).surface,
                           borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(color: const Color(0xFFE7ECF3)),
+                          border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
                         ),
                         child: Column(
                           children: [

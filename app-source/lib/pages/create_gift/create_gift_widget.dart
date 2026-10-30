@@ -55,7 +55,7 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
       labelText: label,
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: FlutterFlowTheme.of(context).surface,
       contentPadding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
       labelStyle: FlutterFlowTheme.of(context).bodySmall.override(
             color: _blue.withValues(alpha: .9),
@@ -136,7 +136,7 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(13, 12, 13, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FlutterFlowTheme.of(context).surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _blue.withValues(alpha: .12)),
       ),
@@ -336,9 +336,9 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
         isLoading: _creating,
         onPressed: _continueToFunding,
       ),
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: _blue),
@@ -504,7 +504,7 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
                               padding: const EdgeInsetsDirectional.fromSTEB(
                                   12, 0, 10, 0),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: FlutterFlowTheme.of(context).surface,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                     color: _blue.withValues(alpha: .16)),
@@ -533,7 +533,7 @@ class _CreateGiftWidgetState extends State<CreateGiftWidget> {
                       padding:
                           const EdgeInsetsDirectional.fromSTEB(13, 12, 13, 12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: FlutterFlowTheme.of(context).surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: _blue.withValues(alpha: .12)),
                       ),

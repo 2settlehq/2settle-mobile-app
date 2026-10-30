@@ -467,7 +467,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
       labelText: label,
       labelStyle: _labelStyle(context),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: FlutterFlowTheme.of(context).surface,
       contentPadding:
           const EdgeInsetsDirectional.fromSTEB(14.0, 11.0, 14.0, 11.0),
       enabledBorder: OutlineInputBorder(
@@ -530,7 +530,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(10.0, 8.0, 10.0, 8.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0F0),
+        color: FlutterFlowTheme.of(context).errorSurface,
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: Row(
@@ -686,8 +686,8 @@ class _PayPageWidgetState extends State<PayPageWidget> {
               child: Container(
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     16.0, 12.0, 16.0, 16.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(24.0),
                   ),
@@ -708,7 +708,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
                         width: 42.0,
                         height: 4.0,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE1E6F0),
+                          color: FlutterFlowTheme.of(context).borderSubtle,
                           borderRadius: BorderRadius.circular(100.0),
                         ),
                       ),
@@ -899,7 +899,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
       alignment: Alignment.centerLeft,
       padding: const EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FlutterFlowTheme.of(context).surface,
         borderRadius: BorderRadius.circular(12.0),
         border: Border.all(color: _blue.withValues(alpha: 0.16)),
       ),
@@ -937,7 +937,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
       return Container(
         padding: const EdgeInsetsDirectional.fromSTEB(18.0, 18.0, 18.0, 18.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(16.0),
           border: Border.all(color: _blue.withValues(alpha: 0.08)),
         ),
@@ -982,9 +982,9 @@ class _PayPageWidgetState extends State<PayPageWidget> {
             padding:
                 const EdgeInsetsDirectional.fromSTEB(14.0, 11.0, 14.0, 11.0),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: FlutterFlowTheme.of(context).surface,
               borderRadius: BorderRadius.circular(14.0),
-              border: Border.all(color: const Color(0xFFE8ECF3)),
+              border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
             ),
             child: Row(
               children: [
@@ -1099,7 +1099,7 @@ class _PayPageWidgetState extends State<PayPageWidget> {
             color: selected ? _blue : Colors.white,
             borderRadius: BorderRadius.circular(16.0),
             border: Border.all(
-              color: selected ? _blue : const Color(0xFFE2E7EF),
+              color: selected ? _blue : FlutterFlowTheme.of(context).borderSubtle,
               width: 0.8,
             ),
           ),
@@ -1131,9 +1131,9 @@ class _PayPageWidgetState extends State<PayPageWidget> {
         onPressed: _createRequest,
       ),
       key: scaffoldKey,
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
           borderColor: Colors.transparent,

@@ -385,20 +385,15 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
   }
 
   Color get _statusBackground {
-    if (_isSuccessStatus) return const Color(0xFFEAF8EF);
+    final theme = FlutterFlowTheme.of(context);
+    if (_isSuccessStatus) return theme.successSurface;
     if (_isProgressStatus || _status == 'ready') {
       return _blue.withValues(alpha: 0.1);
     }
-    return const Color(0xFFFFF4F2);
+    return theme.errorSurface;
   }
 
-  Color get _statusBorder {
-    if (_isSuccessStatus) return const Color(0xFFBDECCB);
-    if (_isProgressStatus || _status == 'ready') {
-      return _blue.withValues(alpha: 0.24);
-    }
-    return const Color(0xFFFECACA);
-  }
+  Color get _statusBorder => _statusAccent.withValues(alpha: 0.3);
 
   IconData get _statusIcon {
     if (_isSuccessStatus) return Icons.check_circle_outline_rounded;
@@ -413,7 +408,7 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
     final canClaim =
         !_isClaiming && (_status == 'ready' || _status == 'failed');
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: Stack(
           children: [
@@ -435,7 +430,7 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     20.0, 12.0, 20.0, 20.0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.circular(28.0),
                   boxShadow: const [
                     BoxShadow(
@@ -452,7 +447,7 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
                       width: 42.0,
                       height: 4.0,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD7DCE5),
+                        color: FlutterFlowTheme.of(context).borderSubtle,
                         borderRadius: BorderRadius.circular(999.0),
                       ),
                     ),
@@ -553,9 +548,9 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
                       padding: const EdgeInsetsDirectional.fromSTEB(
                           12.0, 10.0, 12.0, 10.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFD),
+                        color: FlutterFlowTheme.of(context).surfaceMuted,
                         borderRadius: BorderRadius.circular(16.0),
-                        border: Border.all(color: const Color(0xFFE8ECF3)),
+                        border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,26 +567,26 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
                           const SizedBox(height: 4.0),
                           _detailRow('Gift ID', widget.reference,
                               interValue: true),
-                          const Divider(
+                          Divider(
                               height: 1.0,
                               thickness: 0.7,
-                              color: Color(0xFFE5E8EF)),
+                              color: FlutterFlowTheme.of(context).borderSubtle),
                           _detailRow('Receiver', widget.accountName),
-                          const Divider(
+                          Divider(
                               height: 1.0,
                               thickness: 0.7,
-                              color: Color(0xFFE5E8EF)),
+                              color: FlutterFlowTheme.of(context).borderSubtle),
                           _detailRow('Bank', widget.bankName),
-                          const Divider(
+                          Divider(
                               height: 1.0,
                               thickness: 0.7,
-                              color: Color(0xFFE5E8EF)),
+                              color: FlutterFlowTheme.of(context).borderSubtle),
                           _detailRow('Account', _maskedAccount,
                               interValue: true),
-                          const Divider(
+                          Divider(
                               height: 1.0,
                               thickness: 0.7,
-                              color: Color(0xFFE5E8EF)),
+                              color: FlutterFlowTheme.of(context).borderSubtle),
                           _detailRow('Status', _status.toUpperCase()),
                         ],
                       ),
@@ -691,7 +686,7 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
               top: 10.0,
               left: 12.0,
               child: Material(
-                color: Colors.white,
+                color: FlutterFlowTheme.of(context).surface,
                 shape: const CircleBorder(),
                 child: IconButton(
                   icon: const Icon(
@@ -707,7 +702,7 @@ class _ConfirmGiftClaimWidgetState extends State<ConfirmGiftClaimWidget> {
               top: 10.0,
               right: 12.0,
               child: Material(
-                color: Colors.white,
+                color: FlutterFlowTheme.of(context).surface,
                 shape: const CircleBorder(),
                 child: IconButton(
                   icon: const Icon(

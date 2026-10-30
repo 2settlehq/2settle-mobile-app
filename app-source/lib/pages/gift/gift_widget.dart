@@ -239,7 +239,7 @@ class _GiftWidgetState extends State<GiftWidget> {
                 width: 44.0,
                 height: 44.0,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: FlutterFlowTheme.of(context).surface.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: Colors.white, size: 23.0),
@@ -283,9 +283,9 @@ class _GiftWidgetState extends State<GiftWidget> {
       width: double.infinity,
       padding: const EdgeInsetsDirectional.fromSTEB(16.0, 20.0, 16.0, 20.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FlutterFlowTheme.of(context).surface,
         borderRadius: BorderRadius.circular(18.0),
-        border: Border.all(color: const Color(0xFFE5EAF1)),
+        border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
       ),
       child: Column(
         children: [
@@ -347,9 +347,9 @@ class _GiftWidgetState extends State<GiftWidget> {
       ),
       child: Container(
         padding: const EdgeInsetsDirectional.fromSTEB(2.0, 10.0, 2.0, 10.0),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: Color(0xFFE2E7EF), width: 0.8),
+            bottom: BorderSide(color: FlutterFlowTheme.of(context).borderSubtle, width: 0.8),
           ),
         ),
         child: Row(
@@ -454,7 +454,7 @@ class _GiftWidgetState extends State<GiftWidget> {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsetsDirectional.only(bottom: 28.0),

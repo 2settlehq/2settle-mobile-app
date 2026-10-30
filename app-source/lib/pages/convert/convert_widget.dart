@@ -309,7 +309,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
       height: _selectorHeight,
       padding: const EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 9.0, 0.0),
       decoration: BoxDecoration(
-        color: onDark ? Colors.white : _blue,
+        color: onDark ? FlutterFlowTheme.of(context).surface : _blue,
         borderRadius: BorderRadius.circular(999.0),
         border: Border.all(
           color: onDark ? Colors.white : _blue,
@@ -325,7 +325,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          dropdownColor: Colors.white,
+          dropdownColor: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(14.0),
           isExpanded: true,
           selectedItemBuilder: (context) => options
@@ -405,7 +405,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
       height: 34.0,
       decoration: BoxDecoration(
         color: dark
-            ? Colors.white.withValues(alpha: 0.16)
+            ? FlutterFlowTheme.of(context).surface.withValues(alpha: 0.16)
             : _blue.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
@@ -482,7 +482,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
                               width: 2.0,
                               height: 31.0,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.95),
+                                color: FlutterFlowTheme.of(context).surface.withValues(alpha: 0.95),
                                 borderRadius: BorderRadius.circular(4.0),
                               ),
                             ),
@@ -545,7 +545,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
         alignment: Alignment.bottomCenter,
         children: [
           PhysicalShape(
-            color: Colors.white,
+            color: FlutterFlowTheme.of(context).surface,
             elevation: 7.0,
             shadowColor: const Color(0x22000000),
             clipper: const _BottomSelectorNotchClipper(
@@ -686,9 +686,9 @@ class _ConvertWidgetState extends State<ConvertWidget>
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
           borderColor: Colors.transparent,
@@ -749,7 +749,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
               _loadingRate ? 'Updating prices...' : _rateText,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                color: const Color(0xFF303844),
+                color: FlutterFlowTheme.of(context).primaryText,
                 fontSize: 18.0,
                 fontWeight: FontWeight.w900,
                 shadows: const [
@@ -779,7 +779,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
                     width: 50.0,
                     height: 50.0,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: FlutterFlowTheme.of(context).surface,
                       shape: BoxShape.circle,
                       border: Border.all(color: _blue, width: 3.0),
                       boxShadow: const [
@@ -815,7 +815,7 @@ class _ConvertWidgetState extends State<ConvertWidget>
               padding:
                   const EdgeInsetsDirectional.fromSTEB(16.0, 3.0, 16.0, 3.0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: FlutterFlowTheme.of(context).surface,
                 borderRadius: BorderRadius.circular(16.0),
               ),
               child: Column(

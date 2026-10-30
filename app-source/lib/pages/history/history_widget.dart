@@ -418,7 +418,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
           color: selected ? _blue : Colors.white,
           borderRadius: BorderRadius.circular(18.0),
           border: Border.all(
-            color: selected ? _blue : const Color(0xFFE2E7EF),
+            color: selected ? _blue : FlutterFlowTheme.of(context).borderSubtle,
             width: 0.8,
           ),
         ),
@@ -695,7 +695,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
         margin: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 9.0),
         padding: const EdgeInsetsDirectional.fromSTEB(12.0, 11.0, 12.0, 11.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(12.0),
           boxShadow: const [
             BoxShadow(
@@ -805,7 +805,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     final activities = _filteredActivities;
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
         backgroundColor: _blue,
         automaticallyImplyLeading: false,
@@ -848,7 +848,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     16.0, 14.0, 16.0, 14.0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.circular(14.0),
                 ),
                 child: Column(

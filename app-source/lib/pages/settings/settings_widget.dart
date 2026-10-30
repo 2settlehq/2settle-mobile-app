@@ -212,10 +212,10 @@ class _SettingsWidgetState extends State<SettingsWidget>
           ),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFD),
+              color: FlutterFlowTheme.of(context).surfaceMuted,
               borderRadius: BorderRadius.circular(18.0),
               border: Border.all(
-                color: const Color(0xFFE7ECF4),
+                color: FlutterFlowTheme.of(context).borderSubtle,
                 width: 1.0,
               ),
               boxShadow: const [
@@ -250,7 +250,7 @@ class _SettingsWidgetState extends State<SettingsWidget>
         border: showDivider
             ? Border(
                 bottom: BorderSide(
-                  color: const Color(0xFFE3E8F0).withValues(alpha: 0.82),
+                  color: FlutterFlowTheme.of(context).borderSubtle.withValues(alpha: 0.82),
                   width: 0.8,
                 ),
               )
@@ -357,8 +357,8 @@ class _SettingsWidgetState extends State<SettingsWidget>
             width: 58.0,
             height: 58.0,
             padding: const EdgeInsets.all(2.0),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: FlutterFlowTheme.of(context).surface,
               shape: BoxShape.circle,
             ),
             child: ClipOval(
@@ -484,7 +484,7 @@ class _SettingsWidgetState extends State<SettingsWidget>
           decoration: BoxDecoration(
             color: theme.secondaryBackground,
             borderRadius: BorderRadius.circular(14.0),
-            border: Border.all(color: const Color(0xFFE7ECF4)),
+            border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
             boxShadow: const [
               BoxShadow(
                 blurRadius: 10.0,
@@ -532,7 +532,7 @@ class _SettingsWidgetState extends State<SettingsWidget>
       },
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         bottomNavigationBar: _SettingsBottomNavigationBar(
           activeIndex: 4,
           onTap: _openTab,

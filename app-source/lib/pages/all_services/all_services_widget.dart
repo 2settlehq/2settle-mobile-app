@@ -35,7 +35,7 @@ class AllServicesWidget extends StatelessWidget {
         height: 92.0,
         padding: const EdgeInsetsDirectional.fromSTEB(8.0, 10.0, 8.0, 8.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(16.0),
           border: Border.all(color: _blue.withValues(alpha: 0.1)),
           boxShadow: [
@@ -128,7 +128,7 @@ class AllServicesWidget extends StatelessWidget {
         height: 92.0,
         padding: const EdgeInsetsDirectional.fromSTEB(8.0, 10.0, 8.0, 8.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(16.0),
           border: Border.all(color: _blue.withValues(alpha: 0.1)),
           boxShadow: const [
@@ -171,7 +171,7 @@ class AllServicesWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsetsDirectional.only(bottom: 26.0),

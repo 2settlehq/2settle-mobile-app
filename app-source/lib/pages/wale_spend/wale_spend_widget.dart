@@ -17,9 +17,9 @@ class WaleSpendWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
           borderColor: Colors.transparent,
@@ -60,7 +60,7 @@ class WaleSpendWidget extends StatelessWidget {
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     18.0, 22.0, 18.0, 22.0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.circular(22.0),
                   border: Border.all(color: _blue.withValues(alpha: 0.1)),
                   boxShadow: const [
@@ -128,8 +128,8 @@ class WaleSpendWidget extends StatelessWidget {
                             Container(
                               width: 34.0,
                               height: 34.0,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context).surface,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.open_in_new_rounded,

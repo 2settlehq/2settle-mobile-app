@@ -212,7 +212,7 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
                     width: 100.0,
                     height: 100.0,
                     decoration: BoxDecoration(
-                      color: Color(0xFFDBE2E7),
+                      color: FlutterFlowTheme.of(context).borderSubtle,
                       shape: BoxShape.circle,
                     ),
                     child: Padding(

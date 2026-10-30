@@ -305,7 +305,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
     return Divider(
       height: 1.0,
       thickness: 0.7,
-      color: const Color(0xFFE5E8EF),
+      color: FlutterFlowTheme.of(context).borderSubtle,
     );
   }
 
@@ -520,7 +520,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: Stack(
           children: [
@@ -542,7 +542,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     20.0, 12.0, 20.0, 20.0),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: FlutterFlowTheme.of(context).surface,
                   borderRadius: BorderRadius.circular(28.0),
                   boxShadow: const [
                     BoxShadow(
@@ -559,7 +559,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
                       width: 42.0,
                       height: 4.0,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD7DCE5),
+                        color: FlutterFlowTheme.of(context).borderSubtle,
                         borderRadius: BorderRadius.circular(999.0),
                       ),
                     ),
@@ -600,7 +600,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
                       padding: const EdgeInsetsDirectional.fromSTEB(
                           10.0, 7.0, 10.0, 7.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF0F0),
+                        color: FlutterFlowTheme.of(context).errorSurface,
                         borderRadius: BorderRadius.circular(12.0),
                       ),
                       child: Row(
@@ -654,9 +654,9 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
                       padding: const EdgeInsetsDirectional.fromSTEB(
                           12.0, 10.0, 12.0, 10.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFD),
+                        color: FlutterFlowTheme.of(context).surfaceMuted,
                         borderRadius: BorderRadius.circular(16.0),
-                        border: Border.all(color: const Color(0xFFE8ECF3)),
+                        border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -760,7 +760,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
               top: 10.0,
               left: 12.0,
               child: Material(
-                color: Colors.white,
+                color: FlutterFlowTheme.of(context).surface,
                 shape: const CircleBorder(),
                 child: IconButton(
                   icon: const Icon(
@@ -776,7 +776,7 @@ class _ConfirmTransactionWidgetState extends State<ConfirmTransactionWidget> {
               top: 10.0,
               right: 12.0,
               child: Material(
-                color: Colors.white,
+                color: FlutterFlowTheme.of(context).surface,
                 shape: const CircleBorder(),
                 child: IconButton(
                   icon: const Icon(

@@ -1322,7 +1322,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                                           .bodyMedium
                                                           .fontStyle,
                                                 ),
-                                                color: const Color(0xFF232B31)
+                                                color: FlutterFlowTheme.of(context).primaryText
                                                     .withValues(alpha: 0.72),
                                                 fontSize: 17.0,
                                                 fontWeight: FontWeight.w700,
@@ -1347,7 +1347,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                           padding: const EdgeInsetsDirectional
                                               .fromSTEB(4.0, 4.0, 4.0, 4.0),
                                           decoration: BoxDecoration(
-                                            color: Colors.white
+                                            color: FlutterFlowTheme.of(context).surface
                                                 .withValues(alpha: 0.82),
                                             borderRadius:
                                                 BorderRadius.circular(18.0),
@@ -1384,7 +1384,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                           width: 30.0,
                                           height: 30.0,
                                           decoration: BoxDecoration(
-                                            color: Colors.white
+                                            color: FlutterFlowTheme.of(context).surface
                                                 .withValues(alpha: 0.82),
                                             shape: BoxShape.circle,
                                             border: Border.all(
@@ -1453,7 +1453,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                                         .bodySmall
                                                         .fontStyle,
                                               ),
-                                              color: const Color(0xFF232B31)
+                                              color: FlutterFlowTheme.of(context).primaryText
                                                   .withValues(alpha: 0.56),
                                               fontSize: 11.0,
                                               fontWeight: FontWeight.w500,
@@ -1469,7 +1469,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                         _ratePairLabel,
                                         textAlign: TextAlign.center,
                                         style: GoogleFonts.inter(
-                                          color: const Color(0xFF232B31)
+                                          color: FlutterFlowTheme.of(context).primaryText
                                               .withValues(alpha: 0.58),
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w700,

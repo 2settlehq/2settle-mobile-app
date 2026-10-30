@@ -220,7 +220,7 @@ class _MyCardsWidgetState extends State<MyCardsWidget> {
             Positioned.fill(
               child: ClipPath(
                 clipper: const _CardNotchGapClipper(),
-                child: Container(color: const Color(0xFFF4F6FA)),
+                child: Container(color: FlutterFlowTheme.of(context).surfaceMuted),
               ),
             ),
           if (selected)
@@ -376,13 +376,13 @@ class _MyCardsWidgetState extends State<MyCardsWidget> {
           Container(
             width: 32.0,
             height: 32.0,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: FlutterFlowTheme.of(context).surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.add_rounded,
-              color: Color(0xFF101820),
+              color: FlutterFlowTheme.of(context).primaryText,
               size: 20.0,
             ),
           ),
@@ -477,7 +477,7 @@ class _MyCardsWidgetState extends State<MyCardsWidget> {
       padding: const EdgeInsetsDirectional.fromSTEB(10.0, 9.0, 10.0, 9.0),
       margin: const EdgeInsetsDirectional.only(bottom: 9.0),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: FlutterFlowTheme.of(context).surface.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(14.0),
       ),
       child: Row(
@@ -538,9 +538,9 @@ class _MyCardsWidgetState extends State<MyCardsWidget> {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         elevation: 0.0,
         leading: FlutterFlowIconButton(
           borderColor: Colors.transparent,

@@ -1104,7 +1104,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                                     .bodyMedium
                                                     .fontStyle,
                                           ),
-                                          color: Colors.black,
+                                          color: FlutterFlowTheme.of(context).primaryText,
                                           fontSize: 14.0,
                                           letterSpacing: 0.0,
                                           fontWeight: FontWeight.normal,
@@ -1220,7 +1220,7 @@ class _MainTransactionWidgetState extends State<MainTransactionWidget>
                                           ),
                                         ),
                                         style: GoogleFonts.inter(
-                                          color: Color(0xFF171515),
+                                          color: FlutterFlowTheme.of(context).primaryText,
                                           fontSize: 16.0,
                                           fontWeight: FontWeight.w700,
                                           letterSpacing: 0.0,

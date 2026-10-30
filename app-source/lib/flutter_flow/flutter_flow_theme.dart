@@ -66,6 +66,14 @@ abstract class FlutterFlowTheme {
   late Color textColor;
   late Color backgroundComponents;
 
+  // Semantic surface tokens, used in place of hard-coded light colors so
+  // screens adapt to dark mode.
+  late Color surface;
+  late Color surfaceMuted;
+  late Color borderSubtle;
+  late Color errorSurface;
+  late Color successSurface;
+
   FFDesignTokens get designToken => FFDesignTokens(this);
 
   @Deprecated('Use displaySmallFamily instead')
@@ -180,6 +188,12 @@ class LightModeTheme extends FlutterFlowTheme {
   late Color tertiary400 = const Color(0xFF39D2C0);
   late Color textColor = const Color(0xFF1E2429);
   late Color backgroundComponents = const Color(0xFF1D2428);
+
+  late Color surface = const Color(0xFFFFFFFF);
+  late Color surfaceMuted = const Color(0xFFF4F6FA);
+  late Color borderSubtle = const Color(0xFFE7ECF3);
+  late Color errorSurface = const Color(0xFFFFF0F0);
+  late Color successSurface = const Color(0xFFEAF8EF);
 }
 
 abstract class Typography {
@@ -380,32 +394,38 @@ class DarkModeTheme extends FlutterFlowTheme {
   @Deprecated('Use tertiary instead')
   Color get tertiaryColor => tertiary;
 
-  late Color primary = const Color(0xFFFFFFFF);
+  late Color primary = const Color(0xFF4472C4);
   late Color secondary = const Color(0xFF6E99E2);
-  late Color tertiary = const Color(0xFFEE8B60);
-  late Color alternate = const Color(0xFFFF5963);
-  late Color primaryText = const Color(0xFFFFFFFF);
+  late Color tertiary = const Color(0xFF6E99E2);
+  late Color alternate = const Color(0xFF067AEF);
+  late Color primaryText = const Color(0xFFE8ECF1);
   late Color secondaryText = const Color(0xFF95A1AC);
-  late Color primaryBackground = const Color(0xFF1A1F24);
-  late Color secondaryBackground = const Color(0xFF101213);
+  late Color primaryBackground = const Color(0xFF0F1419);
+  late Color secondaryBackground = const Color(0xFF1A2129);
   late Color accent1 = const Color(0xFFEEEEEE);
   late Color accent2 = const Color(0xFFE0E0E0);
   late Color accent3 = const Color(0xFF757575);
   late Color accent4 = const Color(0xFF616161);
-  late Color success = const Color(0xFF04A24C);
+  late Color success = const Color(0xFF22C55E);
   late Color warning = const Color(0xFFFCDC0C);
-  late Color error = const Color(0xFFE21C3D);
-  late Color info = const Color(0xFF1C4494);
+  late Color error = const Color(0xFFF0505F);
+  late Color info = const Color(0xFF6E99E2);
 
   late Color primaryBtnText = const Color(0xFFFFFFFF);
-  late Color lineColor = const Color(0xFF22282F);
+  late Color lineColor = const Color(0xFF2B333D);
   late Color grayIcon = const Color(0xFF95A1AC);
-  late Color gray200 = const Color(0xFFDBE2E7);
-  late Color gray600 = const Color(0xFF262D34);
-  late Color black600 = const Color(0xFF090F13);
+  late Color gray200 = const Color(0xFF2B333D);
+  late Color gray600 = const Color(0xFFC9D1D9);
+  late Color black600 = const Color(0xFFE8ECF1);
   late Color tertiary400 = const Color(0xFF39D2C0);
-  late Color textColor = const Color(0xFF1E2429);
+  late Color textColor = const Color(0xFFE8ECF1);
   late Color backgroundComponents = const Color(0xFF1D2428);
+
+  late Color surface = const Color(0xFF1A2129);
+  late Color surfaceMuted = const Color(0xFF232B34);
+  late Color borderSubtle = const Color(0xFF2B333D);
+  late Color errorSurface = const Color(0xFF3A1D21);
+  late Color successSurface = const Color(0xFF15301F);
 }
 
 class FFDesignTokens {

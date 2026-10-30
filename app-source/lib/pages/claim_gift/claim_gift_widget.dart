@@ -572,7 +572,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
       hintText: hint,
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: FlutterFlowTheme.of(context).surface,
       contentPadding:
           const EdgeInsetsDirectional.fromSTEB(14.0, 12.0, 14.0, 12.0),
       labelStyle: GoogleFonts.inter(
@@ -838,7 +838,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
         isLoading: _isClaiming || _isCheckingGift,
         onPressed: _submitClaimEntry,
       ),
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsetsDirectional.only(bottom: 28.0),
@@ -892,7 +892,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
                 padding: const EdgeInsetsDirectional.fromSTEB(
                     14.0, 14.0, 14.0, 14.0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF3F8),
+                  color: FlutterFlowTheme.of(context).surfaceMuted,
                   borderRadius: BorderRadius.circular(18.0),
                 ),
                 child: Column(
@@ -1042,7 +1042,7 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
                         searchCursorColor: _blue,
                         icon: Icon(Icons.keyboard_arrow_down_rounded,
                             color: theme.secondaryText, size: 18.0),
-                        fillColor: Colors.white,
+                        fillColor: FlutterFlowTheme.of(context).surface,
                         elevation: 2.0,
                         borderColor: _blue.withValues(alpha: 0.18),
                         borderWidth: 1.0,
@@ -1108,8 +1108,8 @@ class _ClaimGiftWidgetState extends State<ClaimGiftWidget> {
                               Container(
                                 width: 30.0,
                                 height: 30.0,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context).surface,
                                   shape: BoxShape.circle,
                                 ),
                                 child: _isClaiming

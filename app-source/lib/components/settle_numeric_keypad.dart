@@ -214,8 +214,8 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
         child: Container(
           margin: const EdgeInsetsDirectional.fromSTEB(10.0, 0.0, 10.0, 0.0),
           padding: const EdgeInsetsDirectional.fromSTEB(18.0, 12.0, 18.0, 16.0),
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: FlutterFlowTheme.of(context).surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
             boxShadow: [
               BoxShadow(
@@ -233,7 +233,7 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
                 width: 42.0,
                 height: 4.0,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE1E6F0),
+                  color: FlutterFlowTheme.of(context).borderSubtle,
                   borderRadius: BorderRadius.circular(100.0),
                 ),
               ),

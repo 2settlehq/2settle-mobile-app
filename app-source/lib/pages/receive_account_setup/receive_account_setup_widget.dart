@@ -413,7 +413,7 @@ class _ReceiveAccountSetupScaffoldState
       labelText: label,
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: FlutterFlowTheme.of(context).surface,
       contentPadding:
           const EdgeInsetsDirectional.fromSTEB(14.0, 13.0, 14.0, 13.0),
       enabledBorder: OutlineInputBorder(
@@ -561,7 +561,7 @@ class _ReceiveAccountSetupScaffoldState
         isLoading: _isSaving,
         onPressed: _save,
       ),
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
         backgroundColor: _blue,
         automaticallyImplyLeading: false,
@@ -622,7 +622,7 @@ class _ReceiveAccountSetupScaffoldState
                 searchCursorColor: _blue,
                 icon: Icon(Icons.keyboard_arrow_down_rounded,
                     color: theme.secondaryText, size: 18.0),
-                fillColor: Colors.white,
+                fillColor: FlutterFlowTheme.of(context).surface,
                 elevation: 2.0,
                 borderColor: _blue.withValues(alpha: 0.18),
                 borderWidth: 1.0,

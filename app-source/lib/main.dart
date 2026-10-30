@@ -11,6 +11,7 @@ import 'backend/firebase/firebase_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/http_logger.dart';
 import '/services/pin_service.dart';
 
 void main() async {
@@ -22,7 +23,7 @@ void main() async {
 
   await FlutterFlowTheme.initialize();
 
-  runApp(MyApp());
+  runWithHttpLogging(() => runApp(MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -170,6 +171,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         fontFamily: 'Hornbill',
         fontFamilyFallback: const ['Inter', 'Roboto', 'Arial'],
         useMaterial3: false,
+        // Keep stock Material surfaces (dropdown menus, popups, dialogs,
+        // sheets) on the app's dark palette instead of Material's defaults.
+        colorScheme: ColorScheme.dark(
+          primary: DarkModeTheme().primary,
+          secondary: DarkModeTheme().secondary,
+          surface: DarkModeTheme().surface,
+          error: DarkModeTheme().error,
+        ),
+        scaffoldBackgroundColor: DarkModeTheme().primaryBackground,
+        canvasColor: DarkModeTheme().surface,
+        cardColor: DarkModeTheme().surface,
+        dividerColor: DarkModeTheme().borderSubtle,
+        dialogTheme:
+            DialogThemeData(backgroundColor: DarkModeTheme().surface),
+        bottomSheetTheme: BottomSheetThemeData(
+          backgroundColor: DarkModeTheme().surface,
+        ),
       ),
       themeMode: _themeMode,
       routerConfig: _router,

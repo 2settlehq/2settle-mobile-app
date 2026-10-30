@@ -283,7 +283,7 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
       width: double.infinity,
       padding: const EdgeInsetsDirectional.fromSTEB(12.0, 12.0, 12.0, 12.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FlutterFlowTheme.of(context).surface,
         borderRadius: BorderRadius.circular(14.0),
         border: Border.all(color: _blue.withValues(alpha: 0.12)),
       ),
@@ -308,7 +308,7 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
                     right: 34.0,
                     child: Container(
                       height: 2.0,
-                      color: const Color(0xFFE8ECF3),
+                      color: FlutterFlowTheme.of(context).borderSubtle,
                     ),
                   ),
                   Positioned(
@@ -351,7 +351,7 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
                                   decoration: BoxDecoration(
                                     color: active
                                         ? _blue
-                                        : const Color(0xFFE8ECF3),
+                                        : FlutterFlowTheme.of(context).borderSubtle,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: Colors.white,
@@ -483,7 +483,7 @@ class _ReceiveFundingWidgetState extends State<ReceiveFundingWidget> {
         height: 42.0,
         padding: const EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(color: _blue.withValues(alpha: 0.15)),
         ),

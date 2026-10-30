@@ -158,7 +158,7 @@ class _ReceiveCryptoWalletWidgetState extends State<ReceiveCryptoWalletWidget> {
       hintText: hint,
       isDense: true,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: FlutterFlowTheme.of(context).surface,
       contentPadding:
           const EdgeInsetsDirectional.fromSTEB(14.0, 13.0, 14.0, 13.0),
       enabledBorder: OutlineInputBorder(
@@ -245,7 +245,7 @@ class _ReceiveCryptoWalletWidgetState extends State<ReceiveCryptoWalletWidget> {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
         backgroundColor: _blue,
         automaticallyImplyLeading: false,

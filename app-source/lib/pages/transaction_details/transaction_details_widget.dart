@@ -151,7 +151,7 @@ class _TransactionDetailsWidgetState extends State<TransactionDetailsWidget> {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       appBar: AppBar(
         backgroundColor: _blue,
         automaticallyImplyLeading: false,
@@ -264,7 +264,7 @@ class _TransactionDetailsWidgetState extends State<TransactionDetailsWidget> {
               padding:
                   const EdgeInsetsDirectional.fromSTEB(16.0, 14.0, 16.0, 14.0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: FlutterFlowTheme.of(context).surface,
                 borderRadius: BorderRadius.circular(16.0),
               ),
               child: Column(

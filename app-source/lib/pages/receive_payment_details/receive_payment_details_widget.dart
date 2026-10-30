@@ -92,9 +92,9 @@ class _ReceivePaymentDetailsWidgetState
         margin: const EdgeInsetsDirectional.only(bottom: 10.0),
         padding: const EdgeInsetsDirectional.fromSTEB(12.0, 11.0, 11.0, 11.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).surface,
           borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(color: const Color(0xFFE6EBF2)),
+          border: Border.all(color: FlutterFlowTheme.of(context).borderSubtle),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.025),
@@ -161,7 +161,7 @@ class _ReceivePaymentDetailsWidgetState
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsetsDirectional.only(bottom: 28.0),
