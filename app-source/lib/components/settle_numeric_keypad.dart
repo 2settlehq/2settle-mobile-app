@@ -16,6 +16,7 @@ class SettleNumericKeypad extends StatefulWidget {
     this.maxLength,
     this.obscurePreview = false,
     this.showPreview = false,
+    this.previewPlaceholder,
     this.submitLabel,
     this.requiredLength,
     this.submitEnabled,
@@ -29,6 +30,7 @@ class SettleNumericKeypad extends StatefulWidget {
   final int? maxLength;
   final bool obscurePreview;
   final bool showPreview;
+  final String? previewPlaceholder;
   final String? submitLabel;
   final int? requiredLength;
   final ValueListenable<bool>? submitEnabled;
@@ -43,6 +45,7 @@ class SettleNumericKeypad extends StatefulWidget {
     int? maxLength,
     bool obscurePreview = false,
     bool showPreview = false,
+    String? previewPlaceholder,
     String? submitLabel,
     int? requiredLength,
     ValueListenable<bool>? submitEnabled,
@@ -63,6 +66,7 @@ class SettleNumericKeypad extends StatefulWidget {
         maxLength: maxLength,
         obscurePreview: obscurePreview,
         showPreview: showPreview,
+        previewPlaceholder: previewPlaceholder,
         submitLabel: submitLabel,
         requiredLength: requiredLength,
         submitEnabled: submitEnabled,
@@ -159,7 +163,7 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
   }
 
   String get _previewText {
-    if (_value.isEmpty) return '0';
+    if (_value.isEmpty) return widget.previewPlaceholder ?? '0';
     if (!widget.obscurePreview) return _value;
     return List.filled(_value.length, '*').join();
   }
@@ -301,7 +305,9 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      color: _blue,
+                      color: _value.isEmpty && widget.previewPlaceholder != null
+                          ? _blue.withValues(alpha: 0.35)
+                          : _blue,
                       fontSize: 24.0,
                       fontWeight: FontWeight.w900,
                     ),

@@ -667,6 +667,8 @@ class _LoginWidgetState extends State<LoginWidget> {
       submitLabel: 'Continue',
       initialValue: _model.phoneNumberTextController?.text ?? '',
       maxLength: 15,
+      showPreview: true,
+      previewPlaceholder: 'Enter phone number',
       onChanged: (value) {
         _model.phoneNumberTextController?.text = value;
         safeSetState(() {});
