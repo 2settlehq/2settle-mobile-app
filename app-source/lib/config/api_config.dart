@@ -23,6 +23,21 @@ class ApiConfig {
     defaultValue: 'https://api.2settle.io',
   );
 
+  /// OAuth *Web* client ID from the Google Cloud project behind Firebase.
+  /// Google Sign-In uses it as serverClientId, which makes the ID token's
+  /// audience this ID on every platform, so it must also be listed in
+  /// payment-engine's GOOGLE_CLIENT_ID. Android only returns an ID token
+  /// when this is set.
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+  );
+
+  /// OAuth *iOS* client ID (bundle com.sirfitech.settleio). Needed on iOS
+  /// because GoogleService-Info.plist has no CLIENT_ID entry.
+  static const String googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+  );
+
   static const String rateUrl = '$baseUrl/api/rate';
   // Public bank-code list. Not yet proxied through the mobile-api gateway
   // (unlike rateUrl/banksResolveUrl) — this is a different upstream host
@@ -37,8 +52,11 @@ class ApiConfig {
   static const String paymentsUrl = '$baseUrl/api/payments';
   static const String paymentsEstimateUrl = '$baseUrl/api/payments/estimate';
 
-  static const String authOtpRequestUrl = '$authBaseUrl/v1/users/auth/otp/request';
-  static const String authOtpVerifyUrl = '$authBaseUrl/v1/users/auth/otp/verify';
+  static const String authOtpRequestUrl =
+      '$authBaseUrl/v1/users/auth/otp/request';
+  static const String authOtpVerifyUrl =
+      '$authBaseUrl/v1/users/auth/otp/verify';
+  static const String authGoogleUrl = '$authBaseUrl/v1/users/auth/google';
   static const String authRefreshUrl = '$authBaseUrl/v1/users/auth/refresh';
   static const String authLogoutUrl = '$authBaseUrl/v1/users/auth/logout';
   static const String userMeUrl = '$authBaseUrl/v1/users/me';

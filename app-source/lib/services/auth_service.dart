@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,10 +11,23 @@ import '/flutter_flow/nav/nav.dart';
 import 'mobile_identity_service.dart';
 
 class AuthResult {
-  const AuthResult.success() : success = true, error = null;
-  const AuthResult.failure(this.error) : success = false;
+  const AuthResult.success()
+      : success = true,
+        cancelled = false,
+        error = null;
+  const AuthResult.failure(this.error)
+      : success = false,
+        cancelled = false;
+
+  /// The user backed out (e.g. closed the Google account picker); callers
+  /// should reset their UI without showing an error.
+  const AuthResult.cancelled()
+      : success = false,
+        cancelled = true,
+        error = null;
 
   final bool success;
+  final bool cancelled;
   final String? error;
 }
 
@@ -32,7 +47,8 @@ class AuthService {
 
   /// [channel] is `'email'` or `'phone'`; [identifier] is the email address
   /// or normalized phone number to send the login code to.
-  static Future<AuthResult> requestOtp(String channel, String identifier) async {
+  static Future<AuthResult> requestOtp(
+      String channel, String identifier) async {
     try {
       final response = await http
           .post(
@@ -48,7 +64,8 @@ class AuthService {
         return const AuthResult.success();
       }
       return AuthResult.failure(
-        _errorMessage(_decode(response.body), 'Could not send code. Try again.'),
+        _errorMessage(
+            _decode(response.body), 'Could not send code. Try again.'),
       );
     } catch (_) {
       return const AuthResult.failure(
@@ -79,17 +96,7 @@ class AuthService {
           .timeout(const Duration(seconds: 12));
       final payload = _decode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = payload['data'];
-        if (data is Map) {
-          final user = data['user'];
-          await _saveSession(
-            accessToken: data['accessToken']?.toString(),
-            refreshToken: data['refreshToken']?.toString(),
-            userId: user is Map ? user['id']?.toString() : null,
-            displayName: user is Map ? user['displayName']?.toString() : null,
-            avatarUrl: user is Map ? user['avatarUrl']?.toString() : null,
-          );
-        }
+        await _saveSessionFromPayload(payload);
         return const AuthResult.success();
       }
       return AuthResult.failure(
@@ -100,6 +107,87 @@ class AuthService {
         'Could not reach the server. Check your connection.',
       );
     }
+  }
+
+  /// Shows Google's account picker, then exchanges the Google ID token for
+  /// a 2Settle session via POST /v1/users/auth/google.
+  static Future<AuthResult> signInWithGoogle() async {
+    if (kIsWeb) {
+      return const AuthResult.failure(
+        'Google sign-in is only available in the mobile app.',
+      );
+    }
+    if (ApiConfig.googleServerClientId.isEmpty) {
+      return const AuthResult.failure('Google sign-in is not set up yet.');
+    }
+
+    final googleSignIn = GoogleSignIn(
+      scopes: const ['email', 'profile'],
+      serverClientId: ApiConfig.googleServerClientId,
+      clientId: defaultTargetPlatform == TargetPlatform.iOS &&
+              ApiConfig.googleIosClientId.isNotEmpty
+          ? ApiConfig.googleIosClientId
+          : null,
+    );
+
+    String? idToken;
+    try {
+      // Sign out first so the account picker always shows, rather than
+      // silently reusing the last Google account on this device.
+      await googleSignIn.signOut().catchError((_) => null);
+      final account = await googleSignIn.signIn();
+      if (account == null) return const AuthResult.cancelled();
+      idToken = (await account.authentication).idToken;
+    } catch (_) {
+      return const AuthResult.failure(
+        'Could not sign in with Google. Try again.',
+      );
+    }
+    if (idToken == null || idToken.isEmpty) {
+      return const AuthResult.failure(
+        'Could not sign in with Google. Try again.',
+      );
+    }
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(ApiConfig.authGoogleUrl),
+            headers: const {
+              'accept': 'application/json',
+              'content-type': 'application/json',
+            },
+            body: jsonEncode({'idToken': idToken}),
+          )
+          .timeout(const Duration(seconds: 12));
+      final payload = _decode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await _saveSessionFromPayload(payload);
+        return const AuthResult.success();
+      }
+      return AuthResult.failure(
+        _errorMessage(payload, 'Could not sign in with Google. Try again.'),
+      );
+    } catch (_) {
+      return const AuthResult.failure(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+  }
+
+  static Future<void> _saveSessionFromPayload(
+    Map<String, dynamic> payload,
+  ) async {
+    final data = payload['data'];
+    if (data is! Map) return;
+    final user = data['user'];
+    await _saveSession(
+      accessToken: data['accessToken']?.toString(),
+      refreshToken: data['refreshToken']?.toString(),
+      userId: user is Map ? user['id']?.toString() : null,
+      displayName: user is Map ? user['displayName']?.toString() : null,
+      avatarUrl: user is Map ? user['avatarUrl']?.toString() : null,
+    );
   }
 
   static Future<void> logout() async {
@@ -287,7 +375,8 @@ class AuthService {
 
   /// Push a profile change to the server and, on success, mirror it into
   /// local storage so the UI reflects it immediately.
-  static Future<AuthResult> updateProfile({String? displayName, String? avatarUrl}) async {
+  static Future<AuthResult> updateProfile(
+      {String? displayName, String? avatarUrl}) async {
     final accessToken = await getAccessToken();
     if (accessToken == null || accessToken.isEmpty) {
       return const AuthResult.failure('Not logged in.');

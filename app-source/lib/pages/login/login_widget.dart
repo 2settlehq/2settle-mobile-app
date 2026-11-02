@@ -8,6 +8,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import '/services/auth_service.dart';
 import '/services/mobile_identity_service.dart';
+import '/services/pin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_model.dart';
@@ -564,6 +565,11 @@ class _LoginWidgetState extends State<LoginWidget> {
       return;
     }
 
+    if (_connectMethod == 'google') {
+      await _handleGoogleSignIn();
+      return;
+    }
+
     if (_connectMethod != 'phone' && _connectMethod != 'email') {
       showTopNotice(
         context,
@@ -640,6 +646,48 @@ class _LoginWidgetState extends State<LoginWidget> {
     await context.pushNamed(
       ConfirmCodeWidget.routeName,
       queryParameters: _isRecoverPinMode ? {'mode': 'recover'} : {},
+    );
+    if (!mounted) return;
+    safeSetState(() {
+      _isContinuing = false;
+      _isContinueDone = false;
+    });
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    safeSetState(() {
+      _isContinuing = true;
+      _isContinueDone = false;
+    });
+
+    final result = await AuthService.signInWithGoogle();
+    if (!mounted) return;
+    if (!result.success) {
+      safeSetState(() {
+        _isContinuing = false;
+        _isContinueDone = false;
+      });
+      if (!result.cancelled) {
+        showTopNotice(
+          context,
+          message: result.error ?? 'Could not sign in with Google. Try again.',
+          type: TopNoticeType.caution,
+        );
+      }
+      return;
+    }
+
+    safeSetState(() => _isContinueDone = true);
+    await Future.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+
+    // Same routing as a verified OTP login (see ConfirmCodeWidget): recovering
+    // a PIN always resets it; otherwise only set one if this device has none.
+    final hasPasscode = !_isRecoverPinMode && await PinService.hasPin();
+    if (!mounted) return;
+    await context.pushNamed(
+      hasPasscode ? DashboardWidget.routeName : SetAppPasscodeWidget.routeName,
+      queryParameters: _isRecoverPinMode ? {'mode': 'reset'} : {},
     );
     if (!mounted) return;
     safeSetState(() {
@@ -976,163 +1024,171 @@ class _LoginWidgetState extends State<LoginWidget> {
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              20.0, 6.0, 20.0, 0.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (_connectMethod == 'phone')
-                                InkWell(
-                                  onTap: _showCountryCodes,
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  child: Container(
-                                    height: 46.0,
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                            10.0, 0.0, 8.0, 0.0),
-                                    margin: const EdgeInsetsDirectional.only(
-                                        end: 8.0),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryBackground,
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      border: Border.all(
+                        if (_connectMethod != 'google')
+                          Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                                20.0, 6.0, 20.0, 0.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (_connectMethod == 'phone')
+                                  InkWell(
+                                    onTap: _showCountryCodes,
+                                    borderRadius: BorderRadius.circular(8.0),
+                                    child: Container(
+                                      height: 46.0,
+                                      padding:
+                                          const EdgeInsetsDirectional.fromSTEB(
+                                              10.0, 0.0, 8.0, 0.0),
+                                      margin: const EdgeInsetsDirectional.only(
+                                          end: 8.0),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
                                         color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        width: 2.0,
+                                            .secondaryBackground,
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                        border: Border.all(
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryBackground,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            _selectedCountry.flag,
+                                            style: const TextStyle(
+                                              fontFamily: 'sans-serif',
+                                              fontSize: 18.0,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 5.0),
+                                          Text(
+                                            _selectedCountry.code,
+                                            style: GoogleFonts.inter(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primaryText,
+                                              fontSize: 14.0,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 0.0,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.keyboard_arrow_down_rounded,
+                                            color: FlutterFlowTheme.of(context)
+                                                .secondaryText,
+                                            size: 17.0,
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          _selectedCountry.flag,
-                                          style: const TextStyle(
-                                            fontFamily: 'sans-serif',
-                                            fontSize: 18.0,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 5.0),
-                                        Text(
-                                          _selectedCountry.code,
-                                          style: GoogleFonts.inter(
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            fontSize: 14.0,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0.0,
-                                          ),
-                                        ),
-                                        Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          color: FlutterFlowTheme.of(context)
-                                              .secondaryText,
-                                          size: 17.0,
-                                        ),
-                                      ],
-                                    ),
                                   ),
-                                ),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _model.phoneNumberTextController,
-                                  focusNode: _model.phoneNumberFocusNode,
-                                  readOnly: _connectMethod == 'phone',
-                                  showCursor: true,
-                                  cursorColor:
-                                      FlutterFlowTheme.of(context).primary,
-                                  cursorWidth: 2.0,
-                                  onTap: _connectMethod == 'phone'
-                                      ? _openPhoneKeypad
-                                      : null,
-                                  keyboardType: _keyboardType,
-                                  textInputAction: TextInputAction.done,
-                                  onFieldSubmitted: (_) =>
-                                      _handleContinuePressed(),
-                                  obscureText: false,
-                                  decoration: InputDecoration(
-                                    labelText: _inputLabel,
-                                    labelStyle: FlutterFlowTheme.of(context)
-                                        .titleSmall
-                                        .override(
-                                          fontFamily: 'Hornbill',
-                                          font: TextStyle(
+                                Expanded(
+                                  child: TextFormField(
+                                    controller:
+                                        _model.phoneNumberTextController,
+                                    focusNode: _model.phoneNumberFocusNode,
+                                    readOnly: _connectMethod == 'phone',
+                                    showCursor: true,
+                                    cursorColor:
+                                        FlutterFlowTheme.of(context).primary,
+                                    cursorWidth: 2.0,
+                                    onTap: _connectMethod == 'phone'
+                                        ? _openPhoneKeypad
+                                        : null,
+                                    keyboardType: _keyboardType,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) =>
+                                        _handleContinuePressed(),
+                                    obscureText: false,
+                                    decoration: InputDecoration(
+                                      labelText: _inputLabel,
+                                      labelStyle: FlutterFlowTheme.of(context)
+                                          .titleSmall
+                                          .override(
+                                            fontFamily: 'Hornbill',
+                                            font: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              fontStyle:
+                                                  FlutterFlowTheme.of(context)
+                                                      .titleSmall
+                                                      .fontStyle,
+                                            ),
+                                            letterSpacing: 0.0,
                                             fontWeight: FontWeight.w500,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
                                                     .titleSmall
                                                     .fontStyle,
                                           ),
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.w500,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .titleSmall
-                                                  .fontStyle,
+                                      hintText: _inputHint,
+                                      hintStyle: GoogleFonts.inter(
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        fontSize: 14.0,
+                                        fontWeight: FontWeight.normal,
+                                        letterSpacing: 0.0,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryBackground,
+                                          width: 2.0,
                                         ),
-                                    hintText: _inputHint,
-                                    hintStyle: GoogleFonts.inter(
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Color(0x00000000),
+                                          width: 2.0,
+                                        ),
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                      errorBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Color(0x00000000),
+                                          width: 2.0,
+                                        ),
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                      focusedErrorBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Color(0x00000000),
+                                          width: 2.0,
+                                        ),
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                      filled: true,
+                                      fillColor: FlutterFlowTheme.of(context)
+                                          .secondaryBackground,
+                                      contentPadding:
+                                          EdgeInsetsDirectional.fromSTEB(
+                                              16.0, 12.0, 16.0, 12.0),
+                                    ),
+                                    style: GoogleFonts.inter(
                                       color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      fontSize: 14.0,
-                                      fontWeight: FontWeight.normal,
+                                          .primaryText,
+                                      fontSize: 18.0,
+                                      fontWeight: FontWeight.w500,
                                       letterSpacing: 0.0,
                                     ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        width: 2.0,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Color(0x00000000),
-                                        width: 2.0,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    errorBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Color(0x00000000),
-                                        width: 2.0,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    focusedErrorBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Color(0x00000000),
-                                        width: 2.0,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    filled: true,
-                                    fillColor: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    contentPadding:
-                                        EdgeInsetsDirectional.fromSTEB(
-                                            16.0, 12.0, 16.0, 12.0),
+                                    maxLines: 1,
+                                    validator: _model
+                                        .phoneNumberTextControllerValidator
+                                        .asValidator(context),
                                   ),
-                                  style: GoogleFonts.inter(
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryText,
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0.0,
-                                  ),
-                                  maxLines: 1,
-                                  validator: _model
-                                      .phoneNumberTextControllerValidator
-                                      .asValidator(context),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
                         Padding(
                           padding: EdgeInsetsDirectional.fromSTEB(
                               20.0, 12.0, 20.0, 32.0),
@@ -1141,7 +1197,9 @@ class _LoginWidgetState extends State<LoginWidget> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               StatusActionButton(
-                                text: 'Continue',
+                                text: _connectMethod == 'google'
+                                    ? 'Continue with Google'
+                                    : 'Continue',
                                 isLoading: _isContinuing && !_isContinueDone,
                                 isDone: _isContinueDone,
                                 onPressed: _handleContinuePressed,
