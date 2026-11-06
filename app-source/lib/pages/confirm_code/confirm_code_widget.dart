@@ -32,6 +32,13 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
   late ConfirmCodeModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  double _keypadHeight = 0.0;
+
+  void _onKeypadHeightChanged(double height) {
+    if (!mounted || height == _keypadHeight) return;
+    setState(() => _keypadHeight = height);
+  }
+
   bool _isConfirming = false;
   bool _isConfirmed = false;
   int _passcodeLength = 6;
@@ -194,6 +201,7 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
     final length = _isUnlockMode ? _passcodeLength : 6;
     SettleNumericKeypad.show(
       context,
+      onHeightChanged: _onKeypadHeightChanged,
       title: _isUnlockMode ? 'App passcode' : 'Confirm code',
       initialValue: _model.pinCodeController?.text ?? '',
       maxLength: length,
@@ -248,202 +256,238 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
               centerTitle: true,
               elevation: 0.0,
             ),
-            body: Column(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(0.0, 24.0, 0.0, 0.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Text(
-                        _isUnlockMode
-                            ? 'Enter App Passcode'
-                            : _isRecoveryMode
-                                ? 'Confirm recovery code'
-                                : 'Confirm your Code',
-                        style:
-                            FlutterFlowTheme.of(context).headlineSmall.override(
-                                  fontFamily: 'Hornbill',
-                                  font: TextStyle(
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .headlineSmall
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .headlineSmall
-                                        .fontStyle,
-                                  ),
-                                  color: Color(0xFF4472C4),
-                                  letterSpacing: 0.0,
-                                  fontWeight: FlutterFlowTheme.of(context)
-                                      .headlineSmall
-                                      .fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .headlineSmall
-                                      .fontStyle,
-                                ),
-                      ),
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            44.0, 8.0, 44.0, 0.0),
-                        child: Text(
-                          _isUnlockMode
-                              ? 'Enter your $_passcodeLength digit app passcode.'
-                              : _isRecoveryMode
-                                  ? 'Enter the code sent to reset your pin.'
-                                  : 'Enter the code sent to your phone or email.',
-                          textAlign: TextAlign.center,
-                          style:
-                              FlutterFlowTheme.of(context).bodySmall.override(
-                                    fontFamily: 'Hornbill',
-                                    font: TextStyle(
-                                      fontWeight: FontWeight.normal,
+            body: AnimatedPadding(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.only(
+                bottom:
+                    (_keypadHeight - MediaQuery.viewInsetsOf(context).bottom)
+                        .clamp(0.0, double.infinity)
+                        .toDouble(),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(
+                              0.0, 24.0, 0.0, 0.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              Text(
+                                _isUnlockMode
+                                    ? 'Enter App Passcode'
+                                    : _isRecoveryMode
+                                        ? 'Confirm recovery code'
+                                        : 'Confirm your Code',
+                                style: FlutterFlowTheme.of(context)
+                                    .headlineSmall
+                                    .override(
+                                      fontFamily: 'Hornbill',
+                                      font: TextStyle(
+                                        fontWeight: FlutterFlowTheme.of(context)
+                                            .headlineSmall
+                                            .fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(context)
+                                            .headlineSmall
+                                            .fontStyle,
+                                      ),
+                                      color: Color(0xFF4472C4),
+                                      letterSpacing: 0.0,
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .headlineSmall
+                                          .fontWeight,
                                       fontStyle: FlutterFlowTheme.of(context)
-                                          .bodySmall
+                                          .headlineSmall
                                           .fontStyle,
                                     ),
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodySmall
-                                        .fontStyle,
-                                  ),
-                        ),
-                      ),
-                      Padding(
-                        padding:
-                            EdgeInsetsDirectional.fromSTEB(0.0, 32.0, 0.0, 0.0),
-                        child: PinCodeTextField(
-                          autoDisposeControllers: false,
-                          appContext: context,
-                          length: _isUnlockMode ? _passcodeLength : 6,
-                          textStyle: GoogleFonts.inter(
-                            color: FlutterFlowTheme.of(context).primary,
-                            fontSize: 18.0,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.0,
-                          ),
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          enableActiveFill: false,
-                          autoFocus: true,
-                          focusNode: _model.pinCodeFocusNode,
-                          enablePinAutofill: true,
-                          errorTextSpace: 16.0,
-                          showCursor: true,
-                          keyboardType: TextInputType.none,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _confirmCode(),
-                          onTap: _openCodeKeypad,
-                          cursorColor: FlutterFlowTheme.of(context).primary,
-                          obscureText: _isUnlockMode,
-                          obscuringCharacter: '*',
-                          hintCharacter: '-',
-                          pinTheme: PinTheme(
-                            fieldHeight: 48.0,
-                            fieldWidth: 44.0,
-                            borderWidth: 2.0,
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(12.0),
-                              bottomRight: Radius.circular(12.0),
-                              topLeft: Radius.circular(12.0),
-                              topRight: Radius.circular(12.0),
-                            ),
-                            shape: PinCodeFieldShape.box,
-                            activeColor: FlutterFlowTheme.of(context).primary,
-                            inactiveColor:
-                                FlutterFlowTheme.of(context).primaryBackground,
-                            selectedColor:
-                                FlutterFlowTheme.of(context).secondaryText,
-                          ),
-                          controller: _model.pinCodeController,
-                          onChanged: (_) {},
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: _model.pinCodeControllerValidator
-                              .asValidator(context),
-                        ),
-                      ),
-                      if (_isUnlockMode)
-                        Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              0.0, 12.0, 0.0, 0.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              InkWell(
-                                onTap: () {
-                                  context.pushNamed(
-                                    LoginWidget.routeName,
-                                    queryParameters: {'mode': 'recover_pin'},
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8.0),
-                                child: Padding(
-                                  padding: const EdgeInsetsDirectional.fromSTEB(
-                                      10.0, 6.0, 10.0, 6.0),
-                                  child: Text(
-                                    'Forgot pin?',
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodySmall
-                                        .override(
-                                          fontFamily: 'Hornbill',
-                                          font: TextStyle(
-                                            fontWeight: FontWeight.normal,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodySmall
-                                                    .fontStyle,
-                                          ),
-                                          color: FlutterFlowTheme.of(context)
-                                              .primary,
-                                          letterSpacing: 0.0,
+                              ),
+                              Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    44.0, 8.0, 44.0, 0.0),
+                                child: Text(
+                                  _isUnlockMode
+                                      ? 'Enter your $_passcodeLength digit app passcode.'
+                                      : _isRecoveryMode
+                                          ? 'Enter the code sent to reset your pin.'
+                                          : 'Enter the code sent to your phone or email.',
+                                  textAlign: TextAlign.center,
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodySmall
+                                      .override(
+                                        fontFamily: 'Hornbill',
+                                        font: TextStyle(
                                           fontWeight: FontWeight.normal,
                                           fontStyle:
                                               FlutterFlowTheme.of(context)
                                                   .bodySmall
                                                   .fontStyle,
                                         ),
-                                  ),
+                                        letterSpacing: 0.0,
+                                        fontWeight: FontWeight.normal,
+                                        fontStyle: FlutterFlowTheme.of(context)
+                                            .bodySmall
+                                            .fontStyle,
+                                      ),
                                 ),
                               ),
-                              const SizedBox(width: 4.0),
-                              InkWell(
-                                onTap: () {
-                                  context.pushNamed(OnboardingWidget.routeName);
-                                },
-                                borderRadius: BorderRadius.circular(18.0),
-                                child: Container(
-                                  width: 32.0,
-                                  height: 32.0,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF4472C4)
-                                        .withValues(alpha: 0.1),
-                                    shape: BoxShape.circle,
+                              Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    0.0, 32.0, 0.0, 0.0),
+                                child: PinCodeTextField(
+                                  autoDisposeControllers: false,
+                                  appContext: context,
+                                  length: _isUnlockMode ? _passcodeLength : 6,
+                                  textStyle: GoogleFonts.inter(
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    fontSize: 18.0,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.0,
                                   ),
-                                  child: const Icon(
-                                    Icons.air_rounded,
-                                    color: Color(0xFF4472C4),
-                                    size: 18.0,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  enableActiveFill: false,
+                                  autoFocus: true,
+                                  focusNode: _model.pinCodeFocusNode,
+                                  enablePinAutofill: true,
+                                  errorTextSpace: 16.0,
+                                  showCursor: true,
+                                  keyboardType: TextInputType.none,
+                                  textInputAction: TextInputAction.done,
+                                  onSubmitted: (_) => _confirmCode(),
+                                  onTap: _openCodeKeypad,
+                                  cursorColor:
+                                      FlutterFlowTheme.of(context).primary,
+                                  obscureText: _isUnlockMode,
+                                  obscuringCharacter: '*',
+                                  hintCharacter: '-',
+                                  pinTheme: PinTheme(
+                                    fieldHeight: 48.0,
+                                    fieldWidth: 44.0,
+                                    borderWidth: 2.0,
+                                    borderRadius: BorderRadius.only(
+                                      bottomLeft: Radius.circular(12.0),
+                                      bottomRight: Radius.circular(12.0),
+                                      topLeft: Radius.circular(12.0),
+                                      topRight: Radius.circular(12.0),
+                                    ),
+                                    shape: PinCodeFieldShape.box,
+                                    activeColor:
+                                        FlutterFlowTheme.of(context).primary,
+                                    inactiveColor: FlutterFlowTheme.of(context)
+                                        .primaryBackground,
+                                    selectedColor: FlutterFlowTheme.of(context)
+                                        .secondaryText,
                                   ),
+                                  controller: _model.pinCodeController,
+                                  onChanged: (_) {},
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  validator: _model.pinCodeControllerValidator
+                                      .asValidator(context),
                                 ),
                               ),
+                              if (_isUnlockMode)
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                      0.0, 12.0, 0.0, 0.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          context.pushNamed(
+                                            LoginWidget.routeName,
+                                            queryParameters: {
+                                              'mode': 'recover_pin'
+                                            },
+                                          );
+                                        },
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                        child: Padding(
+                                          padding: const EdgeInsetsDirectional
+                                              .fromSTEB(10.0, 6.0, 10.0, 6.0),
+                                          child: Text(
+                                            'Forgot pin?',
+                                            style: FlutterFlowTheme.of(context)
+                                                .bodySmall
+                                                .override(
+                                                  fontFamily: 'Hornbill',
+                                                  font: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.normal,
+                                                    fontStyle:
+                                                        FlutterFlowTheme.of(
+                                                                context)
+                                                            .bodySmall
+                                                            .fontStyle,
+                                                  ),
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .primary,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.normal,
+                                                  fontStyle:
+                                                      FlutterFlowTheme.of(
+                                                              context)
+                                                          .bodySmall
+                                                          .fontStyle,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4.0),
+                                      InkWell(
+                                        onTap: () {
+                                          context.pushNamed(
+                                              OnboardingWidget.routeName);
+                                        },
+                                        borderRadius:
+                                            BorderRadius.circular(18.0),
+                                        child: Container(
+                                          width: 32.0,
+                                          height: 32.0,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF4472C4)
+                                                .withValues(alpha: 0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.air_rounded,
+                                            color: Color(0xFF4472C4),
+                                            size: 18.0,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
-                    ],
+                        Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(
+                              0.0, 24.0, 0.0, 44.0),
+                          child: StatusActionButton(
+                            text: 'Confirm',
+                            isLoading: _isConfirming && !_isConfirmed,
+                            isDone: _isConfirmed,
+                            onPressed: _confirmCode,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(0.0, 24.0, 0.0, 44.0),
-                  child: StatusActionButton(
-                    text: 'Confirm',
-                    isLoading: _isConfirming && !_isConfirmed,
-                    isDone: _isConfirmed,
-                    onPressed: _confirmCode,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ));

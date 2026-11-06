@@ -1,6 +1,4 @@
 import '/components/status_action_button.dart';
-import '/components/keyboard_submit_bar.dart';
-import '/components/settle_numeric_keypad.dart';
 import '/components/top_notice.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -696,39 +694,6 @@ class _LoginWidgetState extends State<LoginWidget> {
     });
   }
 
-  Future<void> _openPhoneKeypad() async {
-    _model.phoneNumberFocusNode?.requestFocus();
-    final fieldContext = _model.phoneNumberFocusNode?.context;
-    if (fieldContext != null) {
-      await Scrollable.ensureVisible(
-        fieldContext,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        alignment: 0.02,
-      );
-    }
-    await Future.delayed(const Duration(milliseconds: 80));
-    if (!mounted) return;
-    SettleNumericKeypad.show(
-      context,
-      title: 'Phone number',
-      submitLabel: 'Continue',
-      initialValue: _model.phoneNumberTextController?.text ?? '',
-      maxLength: 15,
-      showPreview: true,
-      previewPlaceholder: 'Enter phone number',
-      onChanged: (value) {
-        _model.phoneNumberTextController?.text = value;
-        safeSetState(() {});
-      },
-      onDone: (value) {
-        _model.phoneNumberTextController?.text = value;
-        safeSetState(() {});
-        _handleContinuePressed();
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -737,11 +702,6 @@ class _LoginWidgetState extends State<LoginWidget> {
         FocusManager.instance.primaryFocus?.unfocus();
       },
       child: Scaffold(
-        bottomNavigationBar: KeyboardSubmitBar(
-          text: 'Continue',
-          isLoading: _isContinuing,
-          onPressed: _handleContinuePressed,
-        ),
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: Container(
@@ -1092,14 +1052,10 @@ class _LoginWidgetState extends State<LoginWidget> {
                                     controller:
                                         _model.phoneNumberTextController,
                                     focusNode: _model.phoneNumberFocusNode,
-                                    readOnly: _connectMethod == 'phone',
                                     showCursor: true,
                                     cursorColor:
                                         FlutterFlowTheme.of(context).primary,
                                     cursorWidth: 2.0,
-                                    onTap: _connectMethod == 'phone'
-                                        ? _openPhoneKeypad
-                                        : null,
                                     keyboardType: _keyboardType,
                                     textInputAction: TextInputAction.done,
                                     onFieldSubmitted: (_) =>

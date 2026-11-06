@@ -20,6 +20,7 @@ class SettleNumericKeypad extends StatefulWidget {
     this.submitLabel,
     this.requiredLength,
     this.submitEnabled,
+    this.onHeightChanged,
   });
 
   final String title;
@@ -34,6 +35,7 @@ class SettleNumericKeypad extends StatefulWidget {
   final String? submitLabel;
   final int? requiredLength;
   final ValueListenable<bool>? submitEnabled;
+  final ValueChanged<double>? onHeightChanged;
 
   static Future<void> show(
     BuildContext context, {
@@ -49,6 +51,7 @@ class SettleNumericKeypad extends StatefulWidget {
     String? submitLabel,
     int? requiredLength,
     ValueListenable<bool>? submitEnabled,
+    ValueChanged<double>? onHeightChanged,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -70,8 +73,9 @@ class SettleNumericKeypad extends StatefulWidget {
         submitLabel: submitLabel,
         requiredLength: requiredLength,
         submitEnabled: submitEnabled,
+        onHeightChanged: onHeightChanged,
       ),
-    );
+    ).whenComplete(() => onHeightChanged?.call(0.0));
   }
 
   @override
@@ -83,6 +87,8 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
   late String _value;
   bool _hapticsEnabled = true;
   bool _submitted = false;
+  final _layoutKey = GlobalKey();
+  double? _reportedHeight;
 
   bool get _canSubmit =>
       (widget.submitEnabled?.value ?? true) &&
@@ -203,8 +209,19 @@ class _SettleNumericKeypadState extends State<SettleNumericKeypad> {
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    if (widget.onHeightChanged != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final height = _layoutKey.currentContext?.size?.height;
+        if (height != null && height != _reportedHeight) {
+          _reportedHeight = height;
+          widget.onHeightChanged!(height);
+        }
+      });
+    }
 
     return Focus(
+      key: _layoutKey,
       autofocus: widget.submitLabel != null,
       onKeyEvent: _onKeyEvent,
       child: SingleChildScrollView(
