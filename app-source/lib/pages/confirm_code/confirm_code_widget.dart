@@ -206,7 +206,6 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
       initialValue: _model.pinCodeController?.text ?? '',
       maxLength: length,
       requiredLength: length,
-      submitLabel: 'Confirm',
       obscurePreview: _isUnlockMode,
       onChanged: (value) {
         _model.pinCodeController?.text = value;
@@ -215,7 +214,6 @@ class _ConfirmCodeWidgetState extends State<ConfirmCodeWidget> {
       onDone: (value) {
         _model.pinCodeController?.text = value;
         safeSetState(() {});
-        _confirmCode();
       },
     );
   }
